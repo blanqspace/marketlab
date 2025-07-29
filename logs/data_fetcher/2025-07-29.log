@@ -1,0 +1,9 @@
+2025-07-29 03:26:04 [INFO] 🟢 Data-Fetcher gestartet
+2025-07-29 03:26:04 [ERROR] config/tasks.json: Erwartet Liste von Tasks.
+2025-07-29 03:30:42 [INFO] 🟢 Data-Fetcher gestartet
+2025-07-29 03:30:42 [INFO] Starte Abruf: import_AAPL_local (AAPL) → file://C:/Users/shaba/OneDrive/Anlagen/robust_lab/data/AAPL.csv
+2025-07-29 03:30:42 [WARNING] import_AAPL_local: Antwort sehr klein (87 Bytes) – Verdacht auf unvollständige Daten.
+2025-07-29 03:30:42 [INFO] import_AAPL_local: 1 Datenzeilen empfangen.
+2025-07-29 03:30:42 [INFO] Abschluss: import_AAPL_local (AAPL)
+2025-07-29 03:30:42 [INFO] Task deaktiviert: import_MSFT_http
+2025-07-29 03:30:42 [INFO] ✅ Data-Fetcher abgeschlossen

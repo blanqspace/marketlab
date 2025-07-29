@@ -1,0 +1,14 @@
+[
+  {
+    "name": "import_AAPL_local",
+    "symbol": "AAPL",
+    "url": "file://C:/Users/shaba/OneDrive/Anlagen/robust_lab/data/AAPL.csv",
+    "active": true
+  },
+  {
+    "name": "import_MSFT_http",
+    "symbol": "MSFT",
+    "url": "https://example.com/data/MSFT",
+    "active": false
+  }
+]

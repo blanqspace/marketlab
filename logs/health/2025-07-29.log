@@ -6,3 +6,7 @@
 2025-07-29 03:22:53 [INFO] ✅ IBKR Gateway erreichbar
 2025-07-29 03:22:53 [ERROR] ❌ Price API NICHT erreichbar!
 2025-07-29 03:22:53 [INFO] ✅ Healthcheck abgeschlossen.
+2025-07-29 03:31:57 [INFO] 🔍 Starte Healthcheck...
+2025-07-29 03:31:57 [INFO] ✅ IBKR Gateway erreichbar
+2025-07-29 03:31:58 [ERROR] ❌ Price API NICHT erreichbar!
+2025-07-29 03:31:58 [INFO] ✅ Healthcheck abgeschlossen.
