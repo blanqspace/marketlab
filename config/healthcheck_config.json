@@ -8,6 +8,6 @@
   {
     "name": "Price API",
     "type": "http",
-    "url": "https://example.com/health"
+    "url": "https://httpbin.org/status/200"
   }
 ]

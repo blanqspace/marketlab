@@ -1,0 +1,7 @@
+2025-07-30 00:43:56 [INFO] 🚀 Starte System: main_runner
+2025-07-30 00:43:56 [INFO] Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+2025-07-30 00:43:56 [INFO] Starte Modul: health ✅
+2025-07-30 00:43:56 [INFO] Starte Modul: data_fetcher ✅
+2025-07-30 00:43:56 [INFO] Modul deaktiviert: order_manager
+2025-07-30 00:43:56 [INFO] Modul deaktiviert: dispatcher
+2025-07-30 00:43:56 [INFO] Systemstart abgeschlossen.

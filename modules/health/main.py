@@ -1,60 +1,60 @@
 import socket
 import requests
+import logging
 import time
+
+from shared.config_loader import load_env
 from shared.logger import get_logger
-from shared.config_loader import load_json_config
 from shared.telegram_notifier import send_telegram_alert
+import json
 
-logger = get_logger("health")
+load_env()  # ⬅️ WICHTIG: direkt beim Start
 
-def check_tcp(host: str, port: int, timeout: float = 3.0) -> bool:
+logger = get_logger("health", log_to_console=False)
+
+def check_tcp(name, host, port):
     try:
-        with socket.create_connection((host, port), timeout):
+        with socket.create_connection((host, port), timeout=5):
+            logger.info(f"✅ {name} erreichbar")
             return True
     except Exception:
+        logger.error(f"❌ {name} NICHT erreichbar!")
+        send_telegram_alert(f"❌ {name} nicht erreichbar (TCP {host}:{port})")  # ✅ Telegram bei Ausfall
         return False
 
-def check_http(url: str, timeout: float = 5.0) -> bool:
+def check_http(name, url):
     try:
-        response = requests.get(url, timeout=timeout)
-        return response.status_code == 200
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            logger.info(f"✅ {name} erreichbar")
+            return True
+        else:
+            logger.error(f"❌ {name} NICHT erreichbar! Status {response.status_code}")
+            send_telegram_alert(f"❌ {name} Down! Status: {response.status_code}")
+            return False
     except Exception:
+        logger.error(f"❌ {name} NICHT erreichbar!")
+        send_telegram_alert(f"❌ {name} nicht erreichbar (HTTP {url})")  # ✅ Telegram bei Ausfall
         return False
+def load_json_config(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 def run():
     logger.info("🔍 Starte Healthcheck...")
 
-    config = load_json_config("config/healthcheck_config.json")
-    failed = []
+    targets = load_json_config("config/healthcheck_config.json")
+    success_count = 0
+    success_count = 0
 
-    for item in config:
-        name = item.get("name")
-        check_type = item.get("type")
+    for target in targets:
+        name = target["name"]
+        if target["type"] == "tcp":
+            success_count += check_tcp(name, target["host"], target["port"])
+        elif target["type"] == "http":
+            success_count += check_http(name, target["url"])
 
-        if check_type == "tcp":
-            host = item.get("host")
-            port = item.get("port")
-            result = check_tcp(host, port)
-        elif check_type == "http":
-            url = item.get("url")
-            result = check_http(url)
-        else:
-            logger.warning(f"Unbekannter Check-Typ: {check_type}")
-            continue
-
-        if result:
-            logger.info(f"✅ {name} erreichbar")
-        else:
-            logger.error(f"❌ {name} NICHT erreichbar!")
-            failed.append(name)
-
-    # Telegram-Benachrichtigung bei Ausfall
-    if failed:
-        msg = "🚨 *Healthcheck-Fehler*\n" + "\n".join([f"– {x}" for x in failed])
-        send_telegram_alert(msg)
-
-    logger.info("✅ Healthcheck abgeschlossen.")
-
+    logger.info(f"✅ Healthcheck abgeschlossen: {success_count}/{len(targets)} Systeme erreichbar")
 
 if __name__ == "__main__":
     run()

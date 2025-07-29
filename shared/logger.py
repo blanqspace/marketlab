@@ -6,7 +6,6 @@ from datetime import datetime
 
 LOG_DIR = Path("logs")
 
-
 def get_logger(modulname: str, log_to_console: bool = False) -> logging.Logger:
     """
     Erstellt einen Logger mit täglicher Rotation.

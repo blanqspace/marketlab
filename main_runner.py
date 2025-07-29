@@ -6,6 +6,7 @@ from shared.thread_tools import start_named_thread
 from shared.file_utils import file_exists
 from pathlib import Path
 import time
+import importlib
 
 logger = get_logger("main_runner", log_to_console=True)
 
@@ -33,25 +34,22 @@ def check_previous_errors():
 
 
 def start_activated_modules():
-    """
-    Lädt startup.json und startet alle aktiv gesetzten Module als Threads.
-    """
     config = load_json_config("config/startup.json")
     modules = config.get("modules", {})
 
     for modulename, active in modules.items():
         if active:
             try:
-                logger.info(f"Starte Modul: {modulename}")
-                # Import wird dynamisch simuliert (z. B. modules.data_fetcher.main)
-                exec(f"import modules.{modulename}.main as {modulename}_main")
-                start_named_thread(modulename, eval(f"{modulename}_main.run"))
+                logger.info(f"Starte Modul: {modulename} ✅")
+                import importlib
+                module_path = f"modules.{modulename}.main"
+                module = importlib.import_module(module_path)
+                module.run()
             except Exception as e:
                 logger.error(f"❌ Fehler beim Start von Modul {modulename}: {e}")
-                send_telegram_alert(f"❌ Fehler beim Start von *{modulename}*:\n{e}")
+                send_telegram_alert(f"❌ Fehler beim Start von Modul *{modulename}*:\n{e}")
         else:
             logger.info(f"Modul deaktiviert: {modulename}")
-
 
 def main():
     logger.info("🚀 Starte System: main_runner")

@@ -1,7 +1,8 @@
 import csv
 import io
 import json
-import os
+import time
+import traceback
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -10,15 +11,14 @@ import requests
 from shared.logger import get_logger
 from shared.config_loader import load_env, get_env_var, load_json_config
 from shared.file_utils import file_exists
+from shared.telegram_notifier import send_telegram_alert
 
-logger = get_logger("data_fetcher")
-
+logger = get_logger("data_fetcher", log_to_console=False)
 FAILED_JSON = Path("logs/errors/failed_requests.json")
 FAILED_JSON.parent.mkdir(parents=True, exist_ok=True)
 
 
 def _append_failed(entry: Dict[str, Any]) -> None:
-    """Hängt einen kompakten Fehler-Eintrag an logs/errors/failed_requests.json an."""
     data: List[Dict[str, Any]] = []
     if file_exists(FAILED_JSON):
         try:
@@ -30,7 +30,6 @@ def _append_failed(entry: Dict[str, Any]) -> None:
 
 
 def _fetch_http(url: str, headers: Dict[str, str], timeout: float = 10.0) -> Optional[str]:
-    """HTTP(S)-Abruf; gibt Text zurück oder None bei Fehler."""
     try:
         resp = requests.get(url, headers=headers, timeout=timeout)
         if resp.status_code != 200:
@@ -49,7 +48,6 @@ def _fetch_http(url: str, headers: Dict[str, str], timeout: float = 10.0) -> Opt
 
 
 def _fetch_file(file_url: str) -> Optional[str]:
-    """Liest lokalen CSV-Content aus file://Pfad."""
     path = file_url.replace("file://", "")
     p = Path(path)
     if not p.exists():
@@ -65,16 +63,14 @@ def _fetch_file(file_url: str) -> Optional[str]:
 
 
 def _count_csv_rows(text: str) -> int:
-    """Zählt CSV-Zeilen (inkl. Header, wenn vorhanden)."""
     try:
         reader = csv.reader(io.StringIO(text))
         return sum(1 for _ in reader)
     except Exception:
-        # Falls kein echtes CSV, fallback: Zeilen zählen
         return len([ln for ln in text.splitlines() if ln.strip()])
 
 
-def _process_task(task: Dict[str, Any], api_key: Optional[str]) -> None:
+def _process_task(task: Dict[str, Any], api_key: Optional[str]) -> bool:
     name = task.get("name", "unnamed_task")
     symbol = task.get("symbol", "UNKNOWN")
     url = task.get("url")
@@ -82,57 +78,75 @@ def _process_task(task: Dict[str, Any], api_key: Optional[str]) -> None:
 
     if not active:
         logger.info(f"Task deaktiviert: {name}")
-        return
+        return True
     if not url:
         logger.error(f"Task {name}: Keine URL angegeben.")
         _append_failed({"task": name, "symbol": symbol, "error": "missing_url"})
-        return
+        send_telegram_alert(f"❌ Fehler im Task *{name}*: Keine URL")
+        return False
 
     logger.info(f"Starte Abruf: {name} ({symbol}) → {url}")
 
-    headers = {}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
     if url.startswith("file://"):
         content = _fetch_file(url)
     else:
-        content = _fetch_http(url, headers=headers, timeout=10.0)
+        content = _fetch_http(url, headers=headers)
 
     if content is None:
         logger.error(f"Abruf fehlgeschlagen: {name} ({symbol})")
-        return
+        send_telegram_alert(f"❌ Abruf fehlgeschlagen: *{symbol}*")
+        return False
 
-    # Content-Length prüfen (Text-basiert)
     size_bytes = len(content.encode("utf-8"))
     if size_bytes < 500:
         logger.warning(f"{name}: Antwort sehr klein ({size_bytes} Bytes) – Verdacht auf unvollständige Daten.")
 
-    # CSV-Zeilen zählen
     rows = _count_csv_rows(content)
     logger.info(f"{name}: {rows} Datenzeilen empfangen.")
 
+    if task.get("save", False):
+        data_dir = Path("data")
+        data_dir.mkdir(exist_ok=True)
+        path = data_dir / f"{symbol}.csv"
+        path.write_text(content, encoding="utf-8")
+        logger.info(f"{name}: Daten gespeichert unter {path}")
+
     logger.info(f"Abschluss: {name} ({symbol})")
+    return True
 
 
 def run():
     logger.info("🟢 Data-Fetcher gestartet")
 
-    # .env laden (idempotent; im main_runner meist bereits geschehen)
-    load_env()
-    api_key = get_env_var("API_KEY", required=False)
+    try:
+        load_env()
+        api_key = get_env_var("API_KEY", required=False)
+        tasks_cfg = load_json_config("config/tasks.json", fallback=[])
 
-    # Tasks laden
-    tasks_cfg = load_json_config("config/tasks.json", fallback=[])
-    if not isinstance(tasks_cfg, list):
-        logger.error("config/tasks.json: Erwartet Liste von Tasks.")
-        return
+        if not isinstance(tasks_cfg, list):
+            logger.error("config/tasks.json: Erwartet Liste von Tasks.")
+            return
 
-    for task in tasks_cfg:
-        _process_task(task, api_key)
+        success_count = 0
+        total_count = len(tasks_cfg)
 
-    logger.info("✅ Data-Fetcher abgeschlossen")
+        for task in tasks_cfg:
+            try:
+                if _process_task(task, api_key):
+                    success_count += 1
+            except Exception as e:
+                logger.error(f"❌ Task fehlgeschlagen: {task.get('name')} → {e}")
+                logger.debug(traceback.format_exc())
+
+        logger.info(f"✅ Data-Fetcher abgeschlossen: {success_count}/{total_count} erfolgreich")
+
+    except Exception as e:
+        logger.error(f"❌ Hauptfehler im Data-Fetcher: {e}")
+        logger.debug(traceback.format_exc())
 
 
+# für Direktstarttest
 if __name__ == "__main__":
     run()
