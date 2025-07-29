@@ -1,0 +1,13 @@
+[
+  {
+    "name": "IBKR Gateway",
+    "type": "tcp",
+    "host": "127.0.0.1",
+    "port": 4002
+  },
+  {
+    "name": "Price API",
+    "type": "http",
+    "url": "https://example.com/health"
+  }
+]

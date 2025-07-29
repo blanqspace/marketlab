@@ -8,3 +8,33 @@
 2025-07-29 02:48:37 [INFO] Starte Modul: health
 2025-07-29 02:48:37 [ERROR] ❌ Fehler beim Start von Modul health: No module named 'modules.health.main'
 2025-07-29 02:48:37 [INFO] Systemstart abgeschlossen.
+2025-07-29 03:05:06 [INFO] 🚀 Starte System: main_runner
+2025-07-29 03:05:06 [INFO] Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+2025-07-29 03:05:06 [INFO] Starte Modul: data_fetcher
+2025-07-29 03:05:06 [ERROR] ❌ Fehler beim Start von Modul data_fetcher: No module named 'modules.data_fetcher.main'
+2025-07-29 03:05:06 [INFO] Modul deaktiviert: order_manager
+2025-07-29 03:05:06 [INFO] Starte Modul: dispatcher
+2025-07-29 03:05:06 [ERROR] ❌ Fehler beim Start von Modul dispatcher: No module named 'modules.dispatcher.main'
+2025-07-29 03:05:06 [INFO] Starte Modul: health
+2025-07-29 03:05:06 [ERROR] ❌ Fehler beim Start von Modul health: No module named 'modules.health.main'
+2025-07-29 03:05:06 [INFO] Systemstart abgeschlossen.
+2025-07-29 03:12:42 [INFO] 🚀 Starte System: main_runner
+2025-07-29 03:12:42 [INFO] Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+2025-07-29 03:12:42 [INFO] Starte Modul: data_fetcher
+2025-07-29 03:12:42 [ERROR] ❌ Fehler beim Start von Modul data_fetcher: No module named 'modules.data_fetcher.main'
+2025-07-29 03:12:42 [INFO] Modul deaktiviert: order_manager
+2025-07-29 03:12:42 [INFO] Starte Modul: dispatcher
+2025-07-29 03:12:42 [ERROR] ❌ Fehler beim Start von Modul dispatcher: No module named 'modules.dispatcher.main'
+2025-07-29 03:12:42 [INFO] Starte Modul: health
+2025-07-29 03:12:42 [ERROR] ❌ Fehler beim Start von Modul health: name 'health_main' is not defined
+2025-07-29 03:12:42 [INFO] Systemstart abgeschlossen.
+2025-07-29 03:17:32 [INFO] 🚀 Starte System: main_runner
+2025-07-29 03:17:32 [INFO] Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+2025-07-29 03:17:32 [INFO] Starte Modul: data_fetcher
+2025-07-29 03:17:32 [ERROR] ❌ Fehler beim Start von Modul data_fetcher: No module named 'modules.data_fetcher.main'
+2025-07-29 03:17:32 [INFO] Modul deaktiviert: order_manager
+2025-07-29 03:17:32 [INFO] Starte Modul: dispatcher
+2025-07-29 03:17:32 [ERROR] ❌ Fehler beim Start von Modul dispatcher: No module named 'modules.dispatcher.main'
+2025-07-29 03:17:32 [INFO] Starte Modul: health
+2025-07-29 03:17:32 [ERROR] ❌ Fehler beim Start von Modul health: name 'health_main' is not defined
+2025-07-29 03:17:32 [INFO] Systemstart abgeschlossen.
