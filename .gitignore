@@ -19,7 +19,7 @@ venv/
 
 # 📦 Backup-Dateien & Logs
 *.zip
-*.log
+#*.log
 *.bak
 
 # 📄 Lokale Reports & Dokumentation

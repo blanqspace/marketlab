@@ -1,0 +1,10 @@
+2025-07-29 02:48:37 [INFO] 🚀 Starte System: main_runner
+2025-07-29 02:48:37 [INFO] Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+2025-07-29 02:48:37 [INFO] Starte Modul: data_fetcher
+2025-07-29 02:48:37 [ERROR] ❌ Fehler beim Start von Modul data_fetcher: No module named 'modules.data_fetcher.main'
+2025-07-29 02:48:37 [INFO] Modul deaktiviert: order_manager
+2025-07-29 02:48:37 [INFO] Starte Modul: dispatcher
+2025-07-29 02:48:37 [ERROR] ❌ Fehler beim Start von Modul dispatcher: No module named 'modules.dispatcher.main'
+2025-07-29 02:48:37 [INFO] Starte Modul: health
+2025-07-29 02:48:37 [ERROR] ❌ Fehler beim Start von Modul health: No module named 'modules.health.main'
+2025-07-29 02:48:37 [INFO] Systemstart abgeschlossen.
