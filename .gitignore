@@ -1,0 +1,36 @@
+# 🧠 Python Cache-Dateien
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ⚙️ Virtuelle Umgebungen
+env/
+venv/
+.venv/
+
+# 🔒 Umgebungsdateien
+.env
+*.env
+
+# 💻 IDE-Einstellungen
+.vscode/
+.idea/
+
+# 📦 Backup-Dateien & Logs
+*.zip
+*.log
+*.bak
+
+# 📄 Lokale Reports & Dokumentation
+#summaries/ erstmal nicht vielleicht wann es public wird
+# *.md
+
+
+# 🛠️ Sonstiges
+.DS_Store
+Thumbs.db
+
+
+#große Dateien
+data/
