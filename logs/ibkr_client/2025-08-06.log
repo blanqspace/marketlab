@@ -1,0 +1,49 @@
+[ibkr_client] 2025-08-06 21:05:37 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 103)
+[ibkr_client] 2025-08-06 21:05:47 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 103)
+[ibkr_client] 2025-08-06 21:05:48 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 103)
+[ibkr_client] 2025-08-06 21:06:48 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 103)
+[ibkr_client] 2025-08-06 21:09:30 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 199)
+[ibkr_client] 2025-08-06 21:09:31 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 199)
+[ibkr_client] 2025-08-06 21:09:31 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 103)
+[ibkr_client] 2025-08-06 21:10:28 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 103)
+[ibkr_client] 2025-08-06 21:15:22 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:15:23 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:15:23 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 21:15:23 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:15:23 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:17:23 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 21:22:39 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:22:39 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:22:39 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 21:22:39 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:22:40 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:23:46 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 21:25:31 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:25:31 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:25:31 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 21:25:31 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:25:31 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:26:28 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 21:28:37 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:28:37 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:28:37 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 21:28:37 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:28:38 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:29:31 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 21:32:14 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:32:14 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:32:14 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 21:32:14 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:32:15 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:34:15 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 21:35:19 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:35:19 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:35:19 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 21:35:19 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 21:35:20 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 21:37:20 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 23:24:39 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 23:24:40 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)
+[ibkr_client] 2025-08-06 23:24:40 [INFO] ✅ Verbindung zu IBKR getrennt (Client ID: 127)
+[ibkr_client] 2025-08-06 23:24:40 [WARNING] ⚠️ Keine gültige client_id gefunden – verwende Fallback-ID 127
+[ibkr_client] 2025-08-06 23:24:41 [INFO] ✅ Verbunden mit IBKR @ 127.0.0.1:4002 (Client ID: 127)

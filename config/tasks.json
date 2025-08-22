@@ -5,19 +5,5 @@
     "url": "file://data/AAPL.csv",
     "active": true,
     "save": false
-  },
-  {
-    "name": "import_MSFT_http",
-    "symbol": "MSFT",
-    "url": "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv",
-    "active": false,
-    "save": true
-  },
-  {
-    "name": "import_FAKE_404",
-    "symbol": "FAKE",
-    "url": "https://example.com/404-data.csv",
-    "active": false,
-    "save": false
   }
 ]

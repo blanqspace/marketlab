@@ -1,0 +1,5 @@
+{
+  "AAPL": { "live": false, "historical": true },
+  "MSFT": { "live": false, "historical": true },
+  "SPY":  { "live": false, "historical": true }
+}

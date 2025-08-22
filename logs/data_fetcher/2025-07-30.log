@@ -6,3 +6,5 @@
 2025-07-30 00:43:56 [INFO] Task deaktiviert: import_MSFT_http
 2025-07-30 00:43:56 [INFO] Task deaktiviert: import_FAKE_404
 2025-07-30 00:43:56 [INFO] ✅ Data-Fetcher abgeschlossen: 3/3 erfolgreich
+[data_fetcher] 2025-07-30 01:42:53 [INFO] 🟢 Data-Fetcher gestartet
+[data_fetcher] 2025-07-30 01:42:53 [ERROR] config/tasks.json: Erwartet Liste von Tasks.

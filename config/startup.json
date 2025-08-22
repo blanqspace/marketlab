@@ -1,7 +1,8 @@
 {
   "modules": {
     "health": true,
-    "data_fetcher": true,
+    "data_fetcher": false,
+    "symbol_fetcher": true,
     "order_manager": false,
     "dispatcher": false
   }

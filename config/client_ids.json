@@ -1,0 +1,8 @@
+{
+  "data_manager": 101,
+  "order_executor": 102,
+  "realtime": 103,
+  "symbol_fetcher_pool": [105,106,107,108,109,110],
+  "strategy_lab": 121,
+  "symbol_probe": 199
+}
