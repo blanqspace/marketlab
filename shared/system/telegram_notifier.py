@@ -2,8 +2,8 @@ import requests
 import os
 import time
 from typing import Optional
-from shared.logger import get_logger
-from shared.config_loader import get_env_var
+from shared.utils.logger import get_logger
+from shared.core.config_loader import get_env_var
 
 logger = get_logger("telegram_notifier")
 

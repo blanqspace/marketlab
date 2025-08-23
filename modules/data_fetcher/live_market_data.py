@@ -1,7 +1,7 @@
 from ib_insync import Stock
-from shared.ibkr_client import IBKRClient
-from shared.logger import get_logger
-from shared.lock_tools import create_lock, remove_lock
+from shared.ibkr_client.ibkr_client import IBKRClient
+from shared.logger.logger import get_logger
+from shared.lock_tools.lock_tools import create_lock, remove_lock
 
 import time
 

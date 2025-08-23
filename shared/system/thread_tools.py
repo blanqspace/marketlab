@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 from typing import Callable, Dict, Optional, Any
 
-from shared.logger import get_logger
+from shared.utils.logger import get_logger
 
 logger = get_logger("thread_tools")
 

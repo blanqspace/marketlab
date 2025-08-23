@@ -1,7 +1,7 @@
 from typing import List
-from shared.logger import get_logger
-from shared.symbol_loader import load_symbols_from_json, load_cached_symbols
-from shared.ibkr_symbol_checker import fetch_symbols_via_ibkr_fallback
+from shared.utils.logger import get_logger
+from shared.ibkr.ibkr_symbol_checker import fetch_symbols_via_ibkr_fallback
+
 
 logger = get_logger("symbol_source")
 

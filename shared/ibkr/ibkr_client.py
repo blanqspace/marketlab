@@ -2,8 +2,8 @@
 import os
 import asyncio
 from ib_insync import IB
-from shared.logger import get_logger
-from shared.client_registry import ClientRegistry
+from shared.utils.logger import get_logger
+from shared.core.client_registry import ClientRegistry
 
 logger = get_logger("ibkr_client")
 

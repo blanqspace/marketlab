@@ -1,51 +1,54 @@
-# sanity_check.py
-import sys, json
-from pathlib import Path
-from shared.logger import get_logger
-from shared.file_utils import load_json_file, write_json_file
+import os
+from datetime import datetime
 
-log = get_logger("sanity", log_to_console=True)
+EXCLUDE_FILES = ["__init__.py", ".env"]
+EXCLUDE_DIRS = [".git", "__pycache__", "venv", "env", ".idea", ".vscode"]
+output_lines = ["# 🗂️ Vollständiger Projektinhalt mit Code\n"]
 
-def main(fix=False):
-    cfg = Path("config")
-    active = set(load_json_file(cfg/"active_symbols.json").get("symbols", []))
-    tasks = load_json_file(cfg/"symbol_tasks.json", expected_type=list)
-    avail = load_json_file(cfg/"symbol_availability.json")
-    ids = load_json_file(cfg/"client_ids.json")
-    startup = load_json_file(cfg/"startup.json").get("modules", {})
-    # 1) Symbole: tasks ⊆ active
-    unknown = [t for t in tasks if t.get("symbol") not in active]
-    if unknown:
-        log.warning(f"symbol_tasks enthält unbekannte Symbole: {[t['symbol'] for t in unknown]}")
-        if fix:
-            tasks = [t for t in tasks if t.get("symbol") in active]
-            write_json_file(cfg/"symbol_tasks.json", tasks)
-            log.info("symbol_tasks.json bereinigt.")
-    # 2) Verfügbarkeit: für alle active Symbole muss Eintrag existieren
-    missing = [s for s in active if s not in avail]
-    if missing:
-        log.warning(f"symbol_availability fehlt für: {missing}")
-        if fix:
-            for s in missing: avail[s] = {"live": False, "historical": False}
-            write_json_file(cfg/"symbol_availability.json", avail)
-            log.info("symbol_availability.json ergänzt.")
-    # 3) Client-ID Eindeutigkeit
-    flat_ids = []
-    for k,v in ids.items():
-        flat_ids += (v if isinstance(v, list) else [v])
-    dups = [i for i in set(flat_ids) if flat_ids.count(i) > 1]
-    if dups:
-        log.error(f"client_ids enthält doppelte IDs: {dups} (manuell korrigieren)")
-    # 4) Modulexistenz
-    mod_dir = Path("modules")
-    requested = [m for m,a in startup.items() if a]
-    missing_mods = [m for m in requested if not (mod_dir/m).exists()]
-    if missing_mods:
-        log.error(f"startup.json aktiviert nicht vorhandene Module: {missing_mods}")
-    # Ergebnis
-    if not (unknown or missing or dups or missing_mods):
-        log.info("✅ Sanity-Check: alles konsistent.")
-    return 0
+def count_lines(lines):
+    total = len(lines)
+    comments = len([l for l in lines if l.strip().startswith("#")])
+    functions = len([l for l in lines if l.strip().startswith("def ")])
+    return total, comments, functions
+
+def scan_file(path):
+    if os.path.basename(path) in EXCLUDE_FILES:
+        return
+
+    with open(path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    total, comments, functions = count_lines(lines)
+    rel_path = os.path.relpath(path, os.getcwd())
+
+    output_lines.append(f"\n## `{rel_path}`")
+    output_lines.append(f"- 📄 Zeilen: {total}")
+    output_lines.append(f"- 🧾 Kommentare: {comments}")
+    output_lines.append(f"- ⚙️ Funktionen: {functions}\n")
+    output_lines.append("```python")
+    output_lines.extend([l.rstrip("\n") for l in lines])
+    output_lines.append("```")
+
+def scan_project(root="."):
+    print("📢 Scanne Projekt...")
+    for root_dir, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
+        for file in files:
+            if file.endswith(".py"):
+                full_path = os.path.join(root_dir, file)
+                scan_file(full_path)
 
 if __name__ == "__main__":
-    sys.exit(main("--fix" in sys.argv))
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    summary_dir = os.path.join(script_dir, "summaries")
+    os.makedirs(summary_dir, exist_ok=True)
+
+    now = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    summary_filename = f"full_code_overview_{now}.md"
+    output_path = os.path.join(summary_dir, summary_filename)
+
+    scan_project(".")
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(output_lines))
+
+    print(f"\n✅ Übersicht gespeichert in:\n{output_path}")

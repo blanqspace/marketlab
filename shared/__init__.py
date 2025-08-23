@@ -2,8 +2,8 @@ from pathlib import Path
 from typing import List, Optional
 import json
 from datetime import datetime
-from shared.file_utils import load_json_file
-from shared.logger import get_logger
+from shared.utils.file_utils import load_json_file
+from shared.utils.logger import get_logger
 
 logger = get_logger("symbol_loader")
 

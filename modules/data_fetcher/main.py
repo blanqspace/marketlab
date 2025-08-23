@@ -8,10 +8,10 @@ from typing import Dict, Any, List, Optional
 
 import requests
 
-from shared.logger import get_logger
-from shared.config_loader import load_env, get_env_var, load_json_config
-from shared.file_utils import file_exists
-from shared.telegram_notifier import send_telegram_alert
+from shared.logger.logger import get_logger
+from shared.config_loader.config_loader import load_env, get_env_var, load_json_config
+from shared.file_utils.file_utils import file_exists
+from shared.telegram_notifier.telegram_notifier import send_telegram_alert
 
 logger = get_logger("data_fetcher", log_to_console=False)
 FAILED_JSON = Path("logs/errors/failed_requests.json")

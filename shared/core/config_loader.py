@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Optional, Type, Union
 from dotenv import load_dotenv
-from shared.logger import get_logger
+from shared.utils.logger import get_logger
 
 logger = get_logger("config_loader")
 

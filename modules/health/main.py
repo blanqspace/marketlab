@@ -3,9 +3,9 @@ import requests
 import logging
 import time
 
-from shared.config_loader import load_env
-from shared.logger import get_logger
-from shared.telegram_notifier import send_telegram_alert
+from shared.config_loader.config_loader import load_env
+from shared.logger.logger import get_logger
+from shared.telegram_notifier.telegram_notifier import send_telegram_alert
 import json
 
 load_env()  # ⬅️ WICHTIG: direkt beim Start

@@ -1,0 +1,26 @@
+[main_runner] 2025-08-23 02:22:48 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-23 02:22:48 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\live_data_aapl.lock
+[main_runner] 2025-08-23 02:22:48 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-23 02:22:48 [WARNING] [sanity] 2025-08-23 02:22:48 [WARNING] symbol_tasks enthält unbekannte Symbole: ['GOOG', 'TSLA']
+[main_runner] 2025-08-23 02:22:48 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-23 02:22:48 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-23 02:22:48 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-23 02:22:48 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-23 02:23:09 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-23 02:23:09 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-23 02:23:09 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-23 02:23:09 [WARNING] [sanity] 2025-08-23 02:23:09 [WARNING] symbol_tasks enthält unbekannte Symbole: ['GOOG', 'TSLA']
+[main_runner] 2025-08-23 02:23:09 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-23 02:23:09 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-23 02:23:09 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-23 02:23:09 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-23 02:40:51 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-23 02:40:51 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-23 02:40:51 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-23 02:40:51 [WARNING] [sanity] 2025-08-23 02:40:51 [WARNING] symbol_tasks enthält unbekannte Symbole: ['GOOG', 'TSLA']
+[main_runner] 2025-08-23 02:40:51 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-23 02:40:51 [INFO] 🟢 Starte Modul: <threading.Event at 0x249c4950050: unset>
+[main_runner] 2025-08-23 02:40:51 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-23 02:40:51 [INFO] 🟢 Starte Modul: <threading.Event at 0x249e36f15b0: unset>
+[main_runner] 2025-08-23 02:40:51 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-23 02:40:51 [INFO] ✅ Systemstart abgeschlossen.

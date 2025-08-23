@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional, Union, Type
 
-from shared.logger import get_logger
+from shared.utils.logger import get_logger
 
 logger = get_logger("file_utils")
 

@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 from typing import Union, List, Optional, Dict
 
-from shared.logger import get_logger
-from shared.file_utils import load_json_file
+from shared.utils.logger import get_logger
+from shared.utils.file_utils import load_json_file
 
 logger = get_logger("client_registry")
 

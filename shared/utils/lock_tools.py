@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
-from shared.logger import get_logger
+from shared.utils.logger import get_logger
 
 LOCK_DIR = Path("runtime/locks")
 LOCK_DIR.mkdir(parents=True, exist_ok=True)

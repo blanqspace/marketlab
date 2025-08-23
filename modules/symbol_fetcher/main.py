@@ -1,8 +1,8 @@
-from shared.ibkr_client import IBKRClient
-from shared.thread_tools import start_named_thread
-from shared.logger import get_logger
-from shared.client_registry import registry
-from shared.config_loader import load_json_config
+from shared.ibkr_client.ibkr_client import IBKRClient
+from shared.thread_tools.thread_tools import start_named_thread
+from shared.logger.logger import get_logger
+from shared.client_registry.client_registry import registry
+from shared.config_loader.config_loader import load_json_config
 import time
 
 logger = get_logger("symbol_fetcher", log_to_console=True)
