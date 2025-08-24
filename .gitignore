@@ -9,7 +9,7 @@ env/
 venv/
 .venv/
 
-# 🔒 Umgebungsdateien
+# 🔒 Umgebungsdateien (API Keys, Secrets)
 .env
 *.env
 
@@ -17,20 +17,23 @@ venv/
 .vscode/
 .idea/
 
-# 📦 Backup-Dateien & Logs
+# 📦 Backup-Dateien & temporäre Logs
 *.zip
-*.log
 *.bak
+*.log
+
+# 📝 Projekt-Logs & Laufzeitdateien
+logs/
+runtime/locks/
+*.lock
 
 # 📄 Lokale Reports & Dokumentation
-#summaries/ erstmal nicht vielleicht wann es public wird
-# *.md
-
+# summaries/   # kannst du aktivieren, wenn öffentlich
+# *.md         # optional
 
 # 🛠️ Sonstiges
 .DS_Store
 Thumbs.db
 
-
-#große Dateien
+# 📊 Große Datenordner (lokale Market-Daten, nicht versionieren)
 data/
