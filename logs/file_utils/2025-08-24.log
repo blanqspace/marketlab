@@ -1,0 +1,5 @@
+[file_utils] 2025-08-24 12:05:19 [DEBUG] 📥 JSON geladen: config/active_symbols.json
+[file_utils] 2025-08-24 12:05:19 [DEBUG] 📥 JSON geladen: config/symbol_tasks.json
+[file_utils] 2025-08-24 12:05:19 [DEBUG] 📥 JSON geladen: config/symbol_availability.json
+[file_utils] 2025-08-24 12:05:19 [DEBUG] 📥 JSON geladen: config/client_ids.json
+[file_utils] 2025-08-24 12:05:19 [DEBUG] 📥 JSON geladen: config/startup.json
