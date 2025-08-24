@@ -1,0 +1,44 @@
+[main_runner] 2025-08-24 12:07:05 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 12:07:05 [INFO] 🧹 Alte Lock-Datei entfernt: runtime/locks/live_data_aapl.lock
+[main_runner] 2025-08-24 12:07:05 [INFO] 🧪 Sanity-Check starte: /usr/bin/python sanity_check.py
+[main_runner] 2025-08-24 12:07:05 [WARNING] [sanity] 2025-08-24 12:07:05 [INFO] ✅ Sanity-Check: alles konsistent.
+[main_runner] 2025-08-24 12:07:05 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 12:07:05 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 12:07:05 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 12:07:05 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 12:07:43 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 12:07:43 [INFO] 🧹 Alte Lock-Datei entfernt: runtime/locks/main_runner.lock
+[main_runner] 2025-08-24 12:07:43 [INFO] 🧪 Sanity-Check starte: /usr/bin/python sanity_check.py
+[main_runner] 2025-08-24 12:07:43 [WARNING] [sanity] 2025-08-24 12:07:43 [INFO] ✅ Sanity-Check: alles konsistent.
+[main_runner] 2025-08-24 12:07:43 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 12:07:43 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 12:07:43 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 12:07:43 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 12:07:58 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 12:07:58 [INFO] 🧹 Alte Lock-Datei entfernt: runtime/locks/main_runner.lock
+[main_runner] 2025-08-24 12:07:58 [INFO] 🧪 Sanity-Check starte: /usr/bin/python sanity_check.py
+[main_runner] 2025-08-24 12:07:58 [WARNING] [sanity] 2025-08-24 12:07:58 [INFO] ✅ Sanity-Check: alles konsistent.
+[main_runner] 2025-08-24 12:07:58 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 12:07:58 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 12:07:58 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 12:07:58 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 12:09:03 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 12:09:03 [INFO] 🧹 Alte Lock-Datei entfernt: runtime/locks/main_runner.lock
+[main_runner] 2025-08-24 12:09:03 [INFO] 🧪 Sanity-Check starte: /usr/bin/python sanity_check.py
+[main_runner] 2025-08-24 12:09:03 [WARNING] [sanity] 2025-08-24 12:09:03 [INFO] ✅ Sanity-Check: alles konsistent.
+[main_runner] 2025-08-24 12:09:03 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 12:09:03 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 12:09:03 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 12:09:03 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 12:09:03 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 12:09:03 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 12:09:28 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 12:09:28 [INFO] 🧹 Alte Lock-Datei entfernt: runtime/locks/main_runner.lock
+[main_runner] 2025-08-24 12:09:28 [INFO] 🧪 Sanity-Check starte: /usr/bin/python sanity_check.py
+[main_runner] 2025-08-24 12:09:28 [WARNING] [sanity] 2025-08-24 12:09:28 [INFO] ✅ Sanity-Check: alles konsistent.
+[main_runner] 2025-08-24 12:09:28 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 12:09:28 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 12:09:28 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 12:09:28 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 12:09:28 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 12:09:28 [INFO] ✅ Systemstart abgeschlossen.

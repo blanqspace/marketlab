@@ -1,7 +1,14 @@
 [
-  { "symbol": "AAPL", "active": true },
-  { "symbol": "MSFT", "active": true },
-  { "symbol": "GOOG", "active": false },
-  { "symbol": "SPY",  "active": true },
-  { "symbol": "TSLA", "active": true }
+  {
+    "symbol": "AAPL",
+    "active": true
+  },
+  {
+    "symbol": "MSFT",
+    "active": true
+  },
+  {
+    "symbol": "SPY",
+    "active": true
+  }
 ]

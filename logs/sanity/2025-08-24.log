@@ -1,0 +1,10 @@
+[sanity] 2025-08-24 12:05:19 [WARNING] symbol_tasks enthält unbekannte Symbole: ['GOOG', 'TSLA']
+[sanity] 2025-08-24 12:06:58 [WARNING] symbol_tasks enthält unbekannte Symbole: ['GOOG', 'TSLA']
+[sanity] 2025-08-24 12:06:58 [INFO] symbol_tasks.json bereinigt.
+[sanity] 2025-08-24 12:07:05 [INFO] ✅ Sanity-Check: alles konsistent.
+[sanity] 2025-08-24 12:07:13 [INFO] ✅ Sanity-Check: alles konsistent.
+[sanity] 2025-08-24 12:07:43 [INFO] ✅ Sanity-Check: alles konsistent.
+[sanity] 2025-08-24 12:07:58 [INFO] ✅ Sanity-Check: alles konsistent.
+[sanity] 2025-08-24 12:09:03 [INFO] ✅ Sanity-Check: alles konsistent.
+[sanity] 2025-08-24 12:09:27 [INFO] ✅ Sanity-Check: alles konsistent.
+[sanity] 2025-08-24 12:09:28 [INFO] ✅ Sanity-Check: alles konsistent.

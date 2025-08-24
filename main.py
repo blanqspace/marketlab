@@ -48,11 +48,11 @@ def start_activated_modules():
 
         start_named_thread(
             name=f"modul_{modulename}",
-            target=partial(run_module, modulename),  # ✅ sicheres Binden
+            target=lambda stop_flag: run_module(stop_flag, modulename),
             daemon=True,
             track=True
         )    
-def run_module(name: str):
+def run_module(stop_flag, name: str):
     try:
         logger.info(f"🟢 Starte Modul: {name}")
         module_path = f"modules.{name}.main"
