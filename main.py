@@ -8,47 +8,101 @@ from shared.logger.logger import get_logger
 
 logger = get_logger("main_runner", log_to_console=True)
 
-# Exit-Funktion
-def summarize_and_exit():
-    summary = summarize_logs()
-    critical_found = False
-    summary_lines = []
+def cleanup_old_locks():
+    """
+    Entfernt alte/verwaiste Lock-Dateien aus runtime/locks/
+    """
+    lock_dir = Path("runtime/locks")
+    if not lock_dir.exists():
+        return
+    for lockfile in lock_dir.glob("*.lock"):
+        lockfile.unlink()
+        logger.info(f"🧹 Alte Lock-Datei entfernt: {lockfile}")
 
-    summary_lines.append("📋 Fehlerübersicht (beim Beenden des Programms):\n")
+def check_previous_errors():
+    """
+    Prüft letzte Fehlerlogs – optional erweiterbar für kritische Warnungen.
+    """
+    error_log_dir = Path("logs/errors")
+    latest = max(error_log_dir.glob("*.log"), default=None, key=lambda f: f.stat().st_mtime) if error_log_dir.exists() else None
+    if latest and latest.stat().st_size > 0:
+        logger.warning(f"⚠️ Letzte Fehlerdatei enthält Einträge: {latest}")
+        send_telegram_alert(f"⚠️ Fehler beim letzten Start gefunden: {latest.name}")
 
-    for module, count, last_line, all_errors in summary:
-        if count > 0:
-            summary_lines.append(f"\n🔧 Modul: {module} ({count} Fehler)")
-            for err in all_errors:
-                summary_lines.append(f"  {err}")
-            if any("CRITICAL" in e or "ERROR" in e for e in all_errors):
-                critical_found = True
+def start_activated_modules():
+    config = load_json_config("config/startup.json")
+    modules = config.get("modules", {})
 
-    summary_text = "\n".join(summary_lines)
+    for modulename, active in modules.items():
+        if not active:
+            logger.info(f"🟡 Modul deaktiviert: {modulename}")
+            continue
 
-    # ⬇️ Speicherort definieren
-    report_path = Path("reports/error_summary.txt")
-    report_path.parent.mkdir(exist_ok=True)
-    report_path.write_text(summary_text, encoding="utf-8")
+        start_named_thread(
+            name=f"modul_{modulename}",
+            target=partial(run_module, modulename),  # ✅ sicheres Binden
+            daemon=True,
+            track=True
+        )    
+def run_module(name: str):
+    try:
+        logger.info(f"🟢 Starte Modul: {name}")
+        module_path = f"modules.{name}.main"
+        module = importlib.import_module(module_path)
+        module.run()
+    except Exception as e:
+        logger.error(f"❌ Fehler beim Start von Modul {name}: {e}")
+        send_telegram_alert(f"❌ Fehler beim Start von Modul *{name}*:\n{e}")
 
-    # 🖨️ Terminal-Ausgabe NUR als Zusammenfassung
-    print("\n📋 Fehlerübersicht (heute):")
-    for module, count, *_ in summary:
-        if count > 0:
-            print(f"- {module}: {count} Fehler")
-    if any(count > 0 for module, count, *_ in summary):
-        print("→ Details siehe reports/error_summary.txt")
+# neu oben:
+import sys, subprocess, os
 
-    # 📬 Telegram nur bei echten Fehlern
-    if critical_found:
-        send_telegram_errors(summary)
+def run_sanity():
+    """Führt sanity_check.py aus. Mit Auto-Fix, wenn SANITY_AUTO_FIX=true."""
+    try:
+        py = sys.executable or "python"
+        args = [py, "sanity_check.py"]
+        if os.getenv("SANITY_AUTO_FIX", "").strip().lower() in ("1", "true", "yes"):
+            args.append("--fix")
+        logger.info(f"🧪 Sanity-Check starte: {' '.join(args)}")
+        res = subprocess.run(args, check=False, capture_output=True, text=True)
+        if res.stdout:
+            for line in res.stdout.strip().splitlines():
+                logger.info(line)
+        if res.stderr:
+            for line in res.stderr.strip().splitlines():
+                logger.warning(line)
+        if res.returncode != 0:
+            logger.warning(f"Sanity-Check meldete Returncode {res.returncode} (weiter mit Start).")
+    except FileNotFoundError:
+        logger.warning("sanity_check.py nicht gefunden – überspringe Sanity-Check.")
+    except Exception as e:
+        logger.warning(f"Sanity-Check konnte nicht ausgeführt werden: {e}")
 
-    # ⛔️ Exit-Code setzen, wenn Fehler
-    if critical_found:
-        sys.exit(1)
+def main():
+    logger.info("🚀 Starte System: main_runner")
+    load_env()
 
-atexit.register(summarize_and_exit)
+    # ✅ erst verwaiste Locks bereinigen, dann eigenes Lock erstellen
+    cleanup_old_locks()
 
-# 🧠 Start deiner Anwendung
-print("🚀 Starte robust_lab...")
-# ... dein restlicher Code ...
+    if not create_lock("main_runner"):
+        logger.error("⛔️ main_runner bereits aktiv. Abbruch.")
+        return
+
+    try:
+        check_previous_errors()
+
+        # ✅ Sanity-Check (optional mit Auto-Fix per ENV)
+        run_sanity()
+
+        start_activated_modules()
+    except Exception as e:
+        logger.exception(f"Fehler beim Start: {e}")
+        send_telegram_alert(f"❌ Hauptstartfehler: {e}")
+    finally:
+        logger.info("✅ Systemstart abgeschlossen.")
+
+
+if __name__ == "__main__":
+    main()
