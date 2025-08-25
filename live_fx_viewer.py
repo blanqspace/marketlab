@@ -7,7 +7,6 @@ import json  # <- hat gefehlt
 from datetime import datetime
 from ib_insync import Forex
 
-# 🔁 Richtige, funktionierende Imports
 from shared.ibkr.ibkr_client import IBKRClient
 from shared.symbols.symbol_selector import choose_symbol_source
 from shared.ibkr.ibkr_symbol_status import check_symbol_availability
