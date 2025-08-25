@@ -1,19 +1,17 @@
 from typing import List
 from shared.utils.logger import get_logger
 from shared.ibkr.ibkr_symbol_checker import fetch_symbols_via_ibkr_fallback
-
+from shared.symbol_loader import load_symbols_from_json, load_cached_symbols
 
 logger = get_logger("symbol_source")
 
 
 def get_active_symbols() -> List[str]:
     """
-    Hauptzugangspunkt für Symbolquelle.
-    Versucht JSON → Cache → IBKR → sonst Warnung
+    Quelle: JSON → Cache → IBKR-Fallback → []
     """
     sources = [
         load_symbols_from_json,
-        # load_symbols_from_db,  # ← später möglich
         load_cached_symbols,
         fetch_symbols_via_ibkr_fallback
     ]

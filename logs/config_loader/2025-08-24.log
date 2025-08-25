@@ -12,3 +12,35 @@
 [config_loader] 2025-08-24 12:09:03 [ERROR] ❌ Typfehler in config/symbol_tasks.json: erwartet dict, erhalten list
 [config_loader] 2025-08-24 12:09:28 [WARNING] .env-Datei nicht gefunden: .env
 [config_loader] 2025-08-24 12:09:28 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 15:24:32 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 15:24:32 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 15:25:43 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 15:25:43 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 17:40:46 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 17:40:46 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 17:43:43 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 17:43:43 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 17:44:24 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 17:44:24 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 17:44:43 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 17:44:43 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 17:58:19 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 17:58:19 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 17:59:16 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 17:59:16 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 18:00:04 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 18:00:04 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 18:00:31 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 18:00:31 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 18:02:36 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 18:02:36 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 18:07:09 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 18:07:09 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 18:15:18 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 18:15:18 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 18:17:29 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 18:17:29 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 18:19:07 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 18:19:08 [INFO] Konfiguration geladen: config/startup.json
+[config_loader] 2025-08-24 18:43:26 [INFO] .env geladen: .env
+[config_loader] 2025-08-24 18:43:26 [INFO] Konfiguration geladen: config/startup.json

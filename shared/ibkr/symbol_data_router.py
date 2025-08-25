@@ -1,12 +1,24 @@
-# shared/symbol_data_router.py
+from typing import Literal, Dict, Any
+from shared.symbols.symbol_status_cache import load_cached_symbols
 
-def get_data_method(symbol: str) -> str:
+Method = Literal["live", "historical", "none"]
+
+
+def get_data_method(symbol: str) -> Method:
     """
-    Gibt zurück: 'live', 'historical' oder 'none'
+    Rückgabe: 'live' | 'historical' | 'none'
+    Logik: Cache prüfen → live? → historical/delayed? → none
     """
-    info = load_availability_for(symbol)
-    if info.get("live"):
-        return "live"
-    elif info.get("historical"):
-        return "historical"
+    cached = load_cached_symbols()
+    if not cached:
+        return "none"
+
+    data = cached.get("symbols")
+    if isinstance(data, dict):
+        info: Dict[str, Any] = data.get(symbol, {})
+        if isinstance(info, dict):
+            if info.get("live"):
+                return "live"
+            if info.get("historical") or info.get("delayed"):
+                return "historical"
     return "none"

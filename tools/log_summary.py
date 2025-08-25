@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 import re
-from shared.telegram_notifier.telegram_notifier import send_telegram_alert  # Wichtig!
+from shared.system.telegram_notifier import send_telegram_alert
 
 LOG_DIR = Path("logs")
 KEYWORDS = ["ERROR", "Exception", "CRITICAL", "WARNING", "Traceback"]

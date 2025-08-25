@@ -42,3 +42,175 @@
 [main_runner] 2025-08-24 12:09:28 [INFO] 🟡 Modul deaktiviert: order_manager
 [main_runner] 2025-08-24 12:09:28 [INFO] 🟡 Modul deaktiviert: dispatcher
 [main_runner] 2025-08-24 12:09:28 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 14:59:50 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 15:24:32 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 15:24:32 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 15:24:32 [WARNING] Traceback (most recent call last):
+[main_runner] 2025-08-24 15:24:32 [WARNING]   File "C:\Users\shaba\OneDrive\Anlagen\robust_lab\sanity_check.py", line 50, in <module>
+[main_runner] 2025-08-24 15:24:32 [WARNING]     scan_project(".")
+[main_runner] 2025-08-24 15:24:32 [WARNING]     ~~~~~~~~~~~~^^^^^
+[main_runner] 2025-08-24 15:24:32 [WARNING]   File "C:\Users\shaba\OneDrive\Anlagen\robust_lab\sanity_check.py", line 33, in scan_project
+[main_runner] 2025-08-24 15:24:32 [WARNING]     print("\U0001f4e2 Scanne Projekt...")
+[main_runner] 2025-08-24 15:24:32 [WARNING]     ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+[main_runner] 2025-08-24 15:24:32 [WARNING]   File "C:\Users\shaba\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+[main_runner] 2025-08-24 15:24:32 [WARNING]     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+[main_runner] 2025-08-24 15:24:32 [WARNING]            ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[main_runner] 2025-08-24 15:24:32 [WARNING] UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e2' in position 0: character maps to <undefined>
+[main_runner] 2025-08-24 15:24:32 [WARNING] Sanity-Check meldete Returncode 1 (weiter mit Start).
+[main_runner] 2025-08-24 15:24:32 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 15:24:32 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 15:24:32 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 15:24:32 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 15:24:32 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 15:24:32 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 15:25:43 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 15:25:43 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-24 15:25:43 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 15:25:43 [WARNING] Traceback (most recent call last):
+[main_runner] 2025-08-24 15:25:43 [WARNING]   File "C:\Users\shaba\OneDrive\Anlagen\robust_lab\sanity_check.py", line 50, in <module>
+[main_runner] 2025-08-24 15:25:43 [WARNING]     scan_project(".")
+[main_runner] 2025-08-24 15:25:43 [WARNING]     ~~~~~~~~~~~~^^^^^
+[main_runner] 2025-08-24 15:25:43 [WARNING]   File "C:\Users\shaba\OneDrive\Anlagen\robust_lab\sanity_check.py", line 33, in scan_project
+[main_runner] 2025-08-24 15:25:43 [WARNING]     print("\U0001f4e2 Scanne Projekt...")
+[main_runner] 2025-08-24 15:25:43 [WARNING]     ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+[main_runner] 2025-08-24 15:25:43 [WARNING]   File "C:\Users\shaba\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+[main_runner] 2025-08-24 15:25:43 [WARNING]     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+[main_runner] 2025-08-24 15:25:43 [WARNING]            ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[main_runner] 2025-08-24 15:25:43 [WARNING] UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e2' in position 0: character maps to <undefined>
+[main_runner] 2025-08-24 15:25:43 [WARNING] Sanity-Check meldete Returncode 1 (weiter mit Start).
+[main_runner] 2025-08-24 15:25:43 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 15:25:43 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 15:25:43 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 15:25:43 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 15:25:43 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 15:25:43 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 17:40:46 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 17:40:46 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-24 17:40:46 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 17:40:46 [INFO] ðŸ“¢ Scanne Projekt...
+[main_runner] 2025-08-24 17:40:46 [INFO] 
+[main_runner] 2025-08-24 17:40:46 [INFO] âœ… Ãœbersicht gespeichert in:
+[main_runner] 2025-08-24 17:40:46 [INFO] C:\Users\shaba\OneDrive\Anlagen\robust_lab\summaries\full_code_overview_2025-08-24_17-40.md
+[main_runner] 2025-08-24 17:40:46 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 17:40:46 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 17:40:46 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 17:40:46 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 17:40:46 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 17:40:46 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 17:43:43 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 17:43:43 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-24 17:43:43 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 17:43:43 [INFO] ðŸ“¢ Scanne Projekt...
+[main_runner] 2025-08-24 17:43:43 [INFO] 
+[main_runner] 2025-08-24 17:43:43 [INFO] âœ… Ãœbersicht gespeichert in:
+[main_runner] 2025-08-24 17:43:43 [INFO] C:\Users\shaba\OneDrive\Anlagen\robust_lab\summaries\full_code_overview_2025-08-24_17-43.md
+[main_runner] 2025-08-24 17:43:43 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 17:43:43 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 17:43:43 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 17:43:43 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 17:43:43 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 17:43:43 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 17:44:24 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 17:44:24 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-24 17:44:24 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 17:44:24 [INFO] Scanne Projekt...
+[main_runner] 2025-08-24 17:44:24 [INFO] 
+[main_runner] 2025-08-24 17:44:24 [INFO]  Ãœbersicht gespeichert in:
+[main_runner] 2025-08-24 17:44:24 [INFO] C:\Users\shaba\OneDrive\Anlagen\robust_lab\summaries\full_code_overview_2025-08-24_17-44.md
+[main_runner] 2025-08-24 17:44:24 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 17:44:24 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 17:44:24 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 17:44:24 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 17:44:24 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 17:44:24 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 17:44:43 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 17:44:43 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-24 17:44:43 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 17:44:43 [INFO] Scanne Projekt...
+[main_runner] 2025-08-24 17:44:43 [INFO] 
+[main_runner] 2025-08-24 17:44:43 [INFO]  Ãœbersicht gespeichert in:
+[main_runner] 2025-08-24 17:44:43 [INFO] C:\Users\shaba\OneDrive\Anlagen\robust_lab\summaries\full_code_overview_2025-08-24_17-44.md
+[main_runner] 2025-08-24 17:44:43 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 17:44:43 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 17:44:43 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 17:44:43 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 17:44:43 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 17:44:43 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 17:58:19 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 17:58:19 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-24 17:58:19 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 17:58:19 [INFO] Scanne Projekt...
+[main_runner] 2025-08-24 17:58:19 [INFO] 
+[main_runner] 2025-08-24 17:58:19 [INFO]  Ãœbersicht gespeichert in:
+[main_runner] 2025-08-24 17:58:19 [INFO] C:\Users\shaba\OneDrive\Anlagen\robust_lab\summaries\full_code_overview_2025-08-24_17-58.md
+[main_runner] 2025-08-24 17:58:19 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 17:58:19 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 17:58:19 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 17:58:19 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 17:58:19 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 17:58:19 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 17:59:16 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 17:59:16 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-24 17:59:16 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 17:59:16 [INFO] Scanne Projekt...
+[main_runner] 2025-08-24 17:59:16 [INFO] 
+[main_runner] 2025-08-24 17:59:16 [INFO]  Ãœbersicht gespeichert in:
+[main_runner] 2025-08-24 17:59:16 [INFO] C:\Users\shaba\OneDrive\Anlagen\robust_lab\summaries\full_code_overview_2025-08-24_17-59.md
+[main_runner] 2025-08-24 17:59:16 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 17:59:16 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 17:59:16 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 17:59:16 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 17:59:16 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 17:59:16 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 18:00:04 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 18:00:04 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-24 18:00:04 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 18:00:04 [INFO] Scanne Projekt...
+[main_runner] 2025-08-24 18:00:04 [INFO] 
+[main_runner] 2025-08-24 18:00:04 [INFO]  Ãœbersicht gespeichert in:
+[main_runner] 2025-08-24 18:00:04 [INFO] C:\Users\shaba\OneDrive\Anlagen\robust_lab\summaries\full_code_overview_2025-08-24_18-00.md
+[main_runner] 2025-08-24 18:00:04 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 18:00:04 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 18:00:04 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 18:00:04 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 18:00:04 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 18:00:04 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 18:00:31 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 18:00:31 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-24 18:00:31 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 18:00:31 [INFO] Scanne Projekt...
+[main_runner] 2025-08-24 18:00:31 [INFO] 
+[main_runner] 2025-08-24 18:00:31 [INFO]  Ãœbersicht gespeichert in:
+[main_runner] 2025-08-24 18:00:31 [INFO] C:\Users\shaba\OneDrive\Anlagen\robust_lab\summaries\full_code_overview_2025-08-24_18-00.md
+[main_runner] 2025-08-24 18:00:31 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 18:00:31 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 18:00:31 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 18:00:31 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 18:00:31 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 18:00:31 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 18:02:36 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 18:02:36 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-24 18:02:36 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 18:02:36 [INFO] Scanne Projekt...
+[main_runner] 2025-08-24 18:02:36 [INFO] 
+[main_runner] 2025-08-24 18:02:36 [INFO]  Übersicht gespeichert in:
+[main_runner] 2025-08-24 18:02:36 [INFO] C:\Users\shaba\OneDrive\Anlagen\robust_lab\summaries\full_code_overview_2025-08-24_18-02.md
+[main_runner] 2025-08-24 18:02:36 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 18:02:36 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 18:02:36 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 18:02:36 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 18:02:36 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 18:02:36 [INFO] ✅ Systemstart abgeschlossen.
+[main_runner] 2025-08-24 18:07:09 [INFO] 🚀 Starte System: main_runner
+[main_runner] 2025-08-24 18:07:09 [INFO] 🧹 Alte Lock-Datei entfernt: runtime\locks\main_runner.lock
+[main_runner] 2025-08-24 18:07:09 [INFO] 🧪 Sanity-Check starte: C:\Users\shaba\AppData\Local\Programs\Python\Python313\python.exe sanity_check.py
+[main_runner] 2025-08-24 18:07:09 [INFO] Scanne Projekt...
+[main_runner] 2025-08-24 18:07:09 [INFO] 
+[main_runner] 2025-08-24 18:07:09 [INFO]  ✅  Übersicht gespeichert in:
+[main_runner] 2025-08-24 18:07:09 [INFO] C:\Users\shaba\OneDrive\Anlagen\robust_lab\summaries\full_code_overview_2025-08-24_18-07.md
+[main_runner] 2025-08-24 18:07:09 [INFO] 🟡 Modul deaktiviert: data_fetcher
+[main_runner] 2025-08-24 18:07:09 [INFO] 🟢 Starte Modul: health
+[main_runner] 2025-08-24 18:07:09 [INFO] 🟡 Modul deaktiviert: order_manager
+[main_runner] 2025-08-24 18:07:09 [INFO] 🟢 Starte Modul: symbol_fetcher
+[main_runner] 2025-08-24 18:07:09 [INFO] 🟡 Modul deaktiviert: dispatcher
+[main_runner] 2025-08-24 18:07:09 [INFO] ✅ Systemstart abgeschlossen.
