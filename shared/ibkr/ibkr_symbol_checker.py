@@ -4,7 +4,7 @@ from ib_insync import Stock
 from shared.utils.logger import get_logger
 from shared.ibkr.ibkr_client import IBKRClient
 from shared.core.client_registry import registry
-
+from shared.symbols.symbol_loader import cache_symbols
 logger = get_logger("ibkr_symbol_checker")
 
 
@@ -53,3 +53,4 @@ def fetch_symbols_via_ibkr_fallback(candidates: Optional[List[str]] = None) -> L
 
     finally:
         ibkr.disconnect()
+

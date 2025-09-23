@@ -1,117 +1,197 @@
-import sys
-import importlib
-import subprocess
-import os
+# main.py
+from __future__ import annotations
+import sys, subprocess
 from pathlib import Path
 
-from tools.log_summary import summarize_logs, send_telegram_errors
-from shared.utils.logger import get_logger
-from shared.core.config_loader import load_env, load_json_config
-from shared.utils.lock_tools import create_lock
-from shared.system.thread_tools import start_named_thread
+# Projekt-Root auf sys.path
+ROOT = Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-APP_NAME = "TradingBot"  # Logger- und Lock-Name neutral
-logger = get_logger(APP_NAME, log_to_console=True)
+from modules.trade.menu import main_menu as trade_menu
+from modules.data.ingest import ingest_one
 
+PY = sys.executable  # z. B. ...\Python313\python.exe
 
-def cleanup_old_locks():
-    lock_dir = Path("runtime/locks")
-    if not lock_dir.exists():
-        return
-    for lockfile in lock_dir.glob("*.lock"):
+# ── Navigation ─────────────────────────────────────────────────────────────
+class GoBack(Exception): ...
+class GoMain(Exception): ...
+class QuitApp(Exception): ...
+
+def _check_nav(raw: str):
+    s = (raw or "").strip().lower()
+    if s in ("0","b","back"): raise GoBack()
+    if s in ("m","menu"):     raise GoMain()
+    if s in ("q","quit","x","exit"): raise QuitApp()
+
+def ask(label: str, default: str | None = None) -> str:
+    raw = input(f"{label}{f' [{default}]' if default is not None else ''}: ").strip()
+    if raw == "" and default is not None:
+        return default
+    _check_nav(raw)
+    return raw
+
+def ask_int(label: str, default: int | None = None, valid: list[int] | None=None) -> int:
+    while True:
         try:
-            lockfile.unlink()
-            logger.info(f"🧹 Alte Lock-Datei entfernt: {lockfile}")
+            val = int(ask(label, str(default) if default is not None else None))
+            if valid and val not in valid:
+                print(f"Bitte eine der Optionen {valid} wählen."); continue
+            return val
+        except (GoBack, GoMain, QuitApp): raise
+        except Exception:
+            print("Bitte eine Zahl eingeben.")
+
+def header(title: str):
+    print("\n" + "-"*70)
+    print(title)
+    print("-"*70)
+    print("Hinweis: 0=Zurück  M=Menü  Q=Beenden")
+
+# ── DATA ───────────────────────────────────────────────────────────────────
+def data_menu():
+    while True:
+        try:
+            header("Daten – Abruf & Prüfung")
+            print("1) Historie abrufen (Fetch → Clean → Manifest)")
+            print("2) CSV prüfen (Duplikate, Gaps)")
+            print("0) Zurück")
+            ch = ask_int("Auswahl", valid=[0,1,2])
+            if ch == 0: return
+            if ch == 1: data_ingest_one()
+            if ch == 2: data_validate_csv()
+        except GoBack: return
+        except GoMain: return
+        except QuitApp: sys.exit(0)
+
+def data_ingest_one():
+    while True:
+        try:
+            header("Daten • Historie abrufen")
+            sym      = ask("Symbol", "AAPL").upper()
+            asset_no = ask_int("Asset  1=Aktie  2=Forex", 1, [1,2])
+            asset    = "stock" if asset_no==1 else "forex"
+            duration = ask("Zeitraum (z. B. 5 D / 1 Y)", "5 D")
+            barsize  = ask("Bar-Größe (z. B. 5 mins / 1 day)", "5 mins")
+            what     = ask("Datenart (TRADES/MIDPOINT/BID/ASK)", "TRADES").upper()
+            rth      = ask("Nur Handelszeit (RTH)? (j/n)", "n").lower().startswith("j")
+            overwrite= ask("RAW überschreiben? (j/n)", "n").lower().startswith("j")
+
+            man = ingest_one(sym, asset, duration, barsize, what, rth, overwrite)
+            print("\n✓ Fertig.")
+            print("RAW:   ", man.get("raw"))
+            print("CLEAN: ", man.get("clean"))
+            print("MANIF.:", man.get("manifest"))
+            _ = ask("Enter=weiter", "")
+            return
+        except (GoBack, GoMain, QuitApp): raise
         except Exception as e:
-            logger.warning(f"Lock {lockfile} konnte nicht gelöscht werden: {e}")
+            print("❌", e); _ = ask("Enter=zurück", ""); return
 
+def data_validate_csv():
+    while True:
+        try:
+            header("Daten • CSV prüfen")
+            fpath = ask("CSV-Pfad", "data/stock_AAPL_5mins.csv")
+            bars  = ask("Bar-Größe (für Gap-Check)", "5 mins")
+            out   = ask("Gesäuberte Ausgabe-Datei (leer=keine)", "")
+            args = [PY, str(ROOT/"modules"/"data"/"validate.py"), fpath, "--barsize", bars]
+            if out: args += ["--out", out]
+            print("→", " ".join(args))
+            subprocess.run(args, check=False)
+            _ = ask("Enter=weiter", "")
+            return
+        except (GoBack, GoMain, QuitApp): raise
 
-def check_previous_errors():
-    summary = summarize_logs()
-    send_telegram_errors(summary)
+# ── BACKTEST ───────────────────────────────────────────────────────────────
+def backtest_menu():
+    while True:
+        try:
+            header("Backtests")
+            print("1) SMA-Strategie testen")
+            print("0) Zurück")
+            ch = ask_int("Auswahl", valid=[0,1])
+            if ch == 0: return
+            if ch == 1: bt_sma()
+        except GoBack: return
+        except GoMain: return
+        except QuitApp: sys.exit(0)
 
+def bt_sma():
+    while True:
+        try:
+            header("Backtest • SMA")
+            csv   = ask("CSV (bereinigt)", "data_clean/stock_AAPL_5mins.csv")
+            fast  = ask("SMA schnell (z. B. 10)", "10")
+            slow  = ask("SMA langsam (z. B. 20)", "20")
+            execm = ask("Ausführung: close / next_open", "close")
+            spread= ask("Spread pro Trade", "0.0")
+            slip  = ask("Slippage", "0.0")
+            fee   = ask("Gebühr fix", "0.0")
+            cash  = ask("Start-Kapital", "100000")
+            risk  = ask("Kapitalanteil (0..1)", "1.0")
+            eqout = ask("Equity-CSV speichern (leer=nein)", "")
 
-def _thread_target_run_module(stop_event, modulename: str):
-    try:
-        logger.info(f"🟢 Starte Modul: {modulename}")
-        module = importlib.import_module(f"modules.{modulename}.main")
-        if hasattr(module, "run"):
-            module.run()
-        else:
-            logger.warning(f"Modul {modulename} hat keine run()-Funktion.")
-    except Exception as e:
-        logger.error(f"❌ Fehler beim Start von Modul {modulename}: {e}")
+            args = [PY, str(ROOT/"modules"/"backtest"/"sma.py"), csv,
+                    "--fast", fast, "--slow", slow, "--exec", execm,
+                    "--spread", spread, "--slippage", slip, "--fee", fee,
+                    "--cash", cash, "--risk", risk]
+            if eqout: args += ["--equity-out", eqout]
 
+            print("→", " ".join(args))
+            subprocess.run(args, check=False)
+            _ = ask("Enter=weiter", "")
+            return
+        except (GoBack, GoMain, QuitApp): raise
 
-def start_activated_modules():
-    config = load_json_config("config/startup.json", fallback={"modules": {}})
-    modules = config.get("modules", {})
-    for modulename, active in modules.items():
-        if not active:
-            logger.info(f"🟡 Modul deaktiviert: {modulename}")
-            continue
-        start_named_thread(
-            name=f"modul_{modulename}",
-            target=_thread_target_run_module,
-            args=(modulename,),
-            daemon=True,
-            track=True
-        )
+# ── Diagnose-Funktionen DIREKT im Hauptmenü ────────────────────────────────
+def run_sanity_check():
+    from modules.diag.sanity import main as sanity_main
+    sanity_main()
+    _ = ask("Enter=weiter", "")
 
+def run_ibkr_status():
+    from modules.diag.status import main as status_main
+    status_main()
+    _ = ask("Enter=weiter", "")
 
-def run_sanity():
-    """
-    Führt tools/sanity_check.py aus.
-    Keine Report-Erstellung. UTF-8 erzwungen. Nicht-blockierend für Start,
-    aber Warnung bei Returncode != 0.
-    """
-    try:
-        py = sys.executable or "python"
-        args = [py, "tools/sanity_check.py"]
+def run_symbol_scan():
+    from modules.diag.status import symbol_scan_cli
+    symbol_scan_cli()
+    _ = ask("Enter=weiter", "")
 
-        env = os.environ.copy()
-        env.setdefault("PYTHONIOENCODING", "utf-8")
-        env.setdefault("PYTHONUTF8", "1")
+def run_pnl_dashboard():
+    from modules.diag.pnl import pnl_dashboard
+    pnl_dashboard(runtime_sec=30, csv_out=True, show_positions=True)
+    _ = ask("Enter=weiter", "")
 
-        logger.info(f"🧪 Sanity-Check starte:")
-        res = subprocess.run(
-            args, check=False, capture_output=True, text=True, env=env,
-            encoding="utf-8", errors="replace"
-        )
-        if res.stdout:
-            for line in res.stdout.splitlines():
-                if line.strip():
-                    logger.info(line)
-        if res.stderr:
-            for line in res.stderr.splitlines():
-                if line.strip():
-                    logger.warning(line)
-        if res.returncode != 0:
-            logger.warning(f"Sanity-Check meldete Returncode {res.returncode} (weiter mit Start).")
-    except FileNotFoundError:
-        logger.warning("tools/sanity_check.py nicht gefunden – überspringe Sanity-Check.")
-    except Exception as e:
-        logger.warning(f"Sanity-Check konnte nicht ausgeführt werden: {e}")
-
-
+# ── ROOT ───────────────────────────────────────────────────────────────────
 def main():
-    logger.info(f"🚀 Starte System: {APP_NAME}")
-    load_env()
-    cleanup_old_locks()
-
-    if not create_lock(APP_NAME):
-        logger.error(f"⛔️ {APP_NAME} bereits aktiv. Abbruch.")
-        return
-
-    try:
-        check_previous_errors()
-        run_sanity()
-        start_activated_modules()
-    except Exception as e:
-        logger.exception(f"Fehler beim Start: {e}")
-    finally:
-        logger.info("✅ Systemstart abgeschlossen.")
-
+    while True:
+        try:
+            header("Hauptmenü")
+            # Reihenfolge: Daten vor Handeln
+            print("1) Daten (Abruf & Prüfung)")
+            print("2) Handeln (Trade Hub)")
+            print("3) Backtests")
+            # vormals „Diagnose“
+            print("4) Sanity-Check")
+            print("5) IBKR-Status")
+            print("6) Symbol-Scan (Paper-Berechtigungen)")
+            print("7) PnL-Dashboard (Paper/LIVE)")
+            print("0) Beenden")
+            ch = ask_int("Auswahl", valid=[0,1,2,3,4,5,6,7])
+            if ch == 0: break
+            if ch == 1: data_menu()
+            if ch == 2: trade_menu()
+            if ch == 3: backtest_menu()
+            if ch == 4: run_sanity_check()
+            if ch == 5: run_ibkr_status()
+            if ch == 6: run_symbol_scan()
+            if ch == 7: run_pnl_dashboard()
+        except GoMain:  continue
+        except GoBack:  continue
+        except QuitApp: break
 
 if __name__ == "__main__":
     main()

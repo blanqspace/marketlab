@@ -1,9 +1,0 @@
-[
-  {
-    "name": "import_AAPL_local",
-    "symbol": "AAPL",
-    "url": "file://data/AAPL.csv",
-    "active": true,
-    "save": false
-  }
-]

@@ -1,7 +1,7 @@
 from typing import List
 from shared.utils.logger import get_logger
 from shared.ibkr.ibkr_symbol_checker import fetch_symbols_via_ibkr_fallback
-from shared.symbol_loader import load_symbols_from_json, load_cached_symbols
+from shared.symbols.symbol_loader import load_symbols_from_json, load_cached_symbols
 
 logger = get_logger("symbol_source")
 
@@ -26,3 +26,4 @@ def get_active_symbols() -> List[str]:
 
     logger.warning("⚠️ Keine aktiven Symbole gefunden.")
     return []
+

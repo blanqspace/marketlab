@@ -1,0 +1,9 @@
+{
+  "default": "stock_5m_30d",
+  "presets": {
+    "stock_5m_30d": {"asset":"stock","duration":"30 D","barsize":"5 mins","what":"TRADES","rth": true},
+    "stock_15m_6m": {"asset":"stock","duration":"6 M","barsize":"15 mins","what":"TRADES","rth": true},
+    "stock_1d_2y":  {"asset":"stock","duration":"2 Y","barsize":"1 day","what":"TRADES","rth": true},
+    "fx_1m_5d":     {"asset":"forex","duration":"5 D","barsize":"1 min","what":"MIDPOINT","rth": false}
+  }
+}

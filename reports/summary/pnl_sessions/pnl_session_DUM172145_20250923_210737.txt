@@ -1,0 +1,14 @@
+=== PnL Session @ 2025-09-23T21:07:52Z ===
+Account: DUM172145
+CSV:     reports\pnl\pnl_DUM172145_20250923_210737.csv
+Positionen:
+  AAPL         -40.00 @ 248.6548125
+
+PnL Start:
+  Unrealized: -192.13   Realized: 0.00   Daily: 59.25
+PnL Ende:
+  Unrealized: -194.50   Realized: 0.00   Daily: 56.88
+Extrema:
+  Unrealized min/max: -194.50 / -192.13
+  Daily      min/max: 56.88 / 59.25
+Alerts: 0

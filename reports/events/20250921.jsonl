@@ -1,0 +1,18 @@
+{"ts": "2025-09-21T15:37:37Z", "kind": "order_sent", "preset": "risk_probe_micro_market", "symbol": "APPL", "order": "MKT", "qty": 1.0, "status": "Cancelled"}
+{"ts": "2025-09-21T15:37:37Z", "kind": "quick_place_summary", "preset": "risk_probe_micro_market", "placed": 1, "errors": 0}
+{"ts": "2025-09-21T15:37:51Z", "kind": "orders_list", "total": 0}
+{"ts": "2025-09-21T15:43:28Z", "kind": "data_ingest_error", "error": "'IBKRClient' object has no attribute 'fetch_hist'"}
+{"ts": "2025-09-21T15:43:43Z", "kind": "data_validate", "file": "data/stock_AAPL_5mins.csv", "barsize": "5 mins", "out": ""}
+{"ts": "2025-09-21T15:43:57Z", "kind": "data_ingest_error", "error": "'IBKRClient' object has no attribute 'fetch_hist'"}
+{"ts": "2025-09-21T15:45:28Z", "kind": "order_sent", "preset": "short_stock", "symbol": "AAPL", "order": "MKT", "qty": 20.0, "status": "PreSubmitted"}
+{"ts": "2025-09-21T15:45:28Z", "kind": "quick_place_summary", "preset": "short_stock", "placed": 1, "errors": 0}
+{"ts": "2025-09-21T15:45:38Z", "kind": "orders_list", "total": 1}
+{"ts": "2025-09-21T16:02:53+00:00", "kind": "order_sent", "payload": {"preset": "short_stock", "symbol": "APPL", "order": "MKT", "qty": 20.0, "status": "PreSubmitted"}}
+{"ts": "2025-09-21T16:02:53+00:00", "kind": "quick_place_summary", "payload": {"preset": "short_stock", "placed": 1, "errors": 0}}
+{"ts": "2025-09-21T16:02:58+00:00", "kind": "orders_list", "payload": {"total": 2}}
+{"ts": "2025-09-21T16:03:19+00:00", "kind": "orders_positions", "payload": {"count": 0}}
+{"ts": "2025-09-21T16:03:29+00:00", "kind": "orders_filter", "payload": {"mode": "symbol", "needle": "APPL", "count": 0}}
+{"ts": "2025-09-21T16:03:41+00:00", "kind": "orders_filter", "payload": {"mode": "active", "count": 2}}
+{"ts": "2025-09-21T16:03:48+00:00", "kind": "orders_filter", "payload": {"mode": "active", "count": 2}}
+{"ts": "2025-09-21T16:05:14+00:00", "kind": "data_ingest_error", "payload": {"error": "'IB' object has no attribute 'qualify_or_raise'"}}
+{"ts": "2025-09-21T16:05:27+00:00", "kind": "data_ingest_error", "payload": {"error": "'IB' object has no attribute 'qualify_or_raise'"}}

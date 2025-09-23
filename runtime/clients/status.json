@@ -1,0 +1,42 @@
+{
+  "199": {
+    "task": "symbol_probe",
+    "module": "internal",
+    "connected": false,
+    "first_seen": "2025-09-17T19:29:36.212228+00:00",
+    "last_update": "2025-09-23T21:11:36.841282+00:00",
+    "last_heartbeat": null
+  },
+  "102": {
+    "task": "list",
+    "module": "order_executor",
+    "connected": false,
+    "first_seen": "2025-09-17T19:31:25.091987+00:00",
+    "last_update": "2025-09-23T21:07:13.318800+00:00",
+    "last_heartbeat": "2025-09-23T21:07:01.339344+00:00"
+  },
+  "101": {
+    "task": "hist_AAPL",
+    "module": "data_manager",
+    "connected": false,
+    "first_seen": "2025-09-17T19:44:44.498190+00:00",
+    "last_update": "2025-09-21T16:05:27.811899+00:00",
+    "last_heartbeat": "2025-09-21T16:05:27.811207+00:00"
+  },
+  "127": {
+    "task": "discover",
+    "module": "availability",
+    "connected": false,
+    "first_seen": "2025-09-21T15:43:28.696804+00:00",
+    "last_update": "2025-09-23T21:14:01.058586+00:00",
+    "last_heartbeat": "2025-09-23T21:14:01.052487+00:00"
+  },
+  "104": {
+    "task": "pnl_view",
+    "module": "account",
+    "connected": false,
+    "first_seen": "2025-09-23T20:58:14.453368+00:00",
+    "last_update": "2025-09-23T21:12:24.571541+00:00",
+    "last_heartbeat": "2025-09-23T21:11:53.865526+00:00"
+  }
+}

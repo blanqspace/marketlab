@@ -2,7 +2,7 @@
   "data_manager": 101,
   "order_executor": 102,
   "realtime": 103,
-  "symbol_fetcher_pool": [105,106,107,108,109,110],
-  "strategy_lab": 121,
-  "symbol_probe": 199
+  "account": 104,
+  "symbol_fetcher_pool": [105,106,107,108,109,110,111,112,113,114,115,116,117,118,119],
+  "strategy_lab": 121
 }

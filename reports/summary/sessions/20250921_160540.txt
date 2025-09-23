@@ -1,0 +1,10 @@
+=== Session Ende @ 2025-09-21T16:05:40+00:00 ===
+Orders: sent=3  errors=0  autocancel=0  dryrun=0
+Top Symbole (Orders): ('APPL', 1)×0
+Statuses: PreSubmitted:1
+Datenabrufe: 0  errors=0
+Backtests: total=0
+Events:  reports/events/<YYYYMMDD>.jsonl
+Summary: reports/summary/<YYYYMMDD>.txt
+Events:  C:\Users\shaba\OneDrive\Anlagen\robust_lab\reports\events\20250921.jsonl
+JSON:    C:\Users\shaba\OneDrive\Anlagen\robust_lab\reports\summary\sessions\20250921_160540.json
