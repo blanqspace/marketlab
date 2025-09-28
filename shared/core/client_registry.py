@@ -188,3 +188,4 @@ registry = ClientRegistry()
 
 # (Optional) vordefinierte, „reservierte“ ID sichtbar machen
 registry.set_status(199, task="symbol_probe", connected=False, module="internal")
+

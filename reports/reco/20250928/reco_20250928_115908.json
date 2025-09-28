@@ -1,0 +1,23 @@
+{
+  "generated_at": "2025-09-28T09:59:15.407208+00:00",
+  "items": [
+    {
+      "symbol": "AAPL",
+      "side": "SELL",
+      "reason": "SMA10>20 Cross 2025-09-26T15:05:00-04:00",
+      "action": "SELL"
+    },
+    {
+      "symbol": "MSFT",
+      "side": "BUY",
+      "reason": "SMA10>20 Cross 2025-09-26T14:35:00-04:00",
+      "action": "BUY"
+    },
+    {
+      "symbol": "SPY",
+      "side": "SELL",
+      "reason": "SMA10>20 Cross 2025-09-26T15:40:00-04:00",
+      "action": "SELL"
+    }
+  ]
+}

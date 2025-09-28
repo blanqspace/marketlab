@@ -95,3 +95,4 @@ def get_active_locks() -> List[Dict[str, Any]]:
             logger.warning(f"⚠️ Fehler beim Lesen von Lock {path}: {e}")
 
     return locks
+

@@ -22,3 +22,4 @@ def run_sma_batch(manifest_path="data_clean/manifest.json", params=None, out_dir
     (batch_dir/"batch.json").write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"Batch gespeichert: {batch_dir}")
     return str(batch_dir)
+

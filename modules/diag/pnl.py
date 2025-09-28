@@ -128,3 +128,4 @@ def pnl_dashboard(runtime_sec: int = 30, csv_out: bool = True, show_positions: b
         txt_path = _write_summary(acct, rows, pos_lines, csv_path)
         if txt_path:
             print(f"(Summary: {txt_path})")
+

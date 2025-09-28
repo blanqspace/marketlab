@@ -1,0 +1,10 @@
+PnL-Session Summary (DUM172145) @ 2025-09-23T21:15:48.937823+00:00
+Positionen:
+  AAPL           -40.00 @ 248.6548125
+
+Letzter PnL:
+  Unrealized: -192.50
+  Realized:   0.00
+  Daily:      58.88
+
+CSV: reports\summary\pnl_sessions\pnl_stream_DUM172145_20250923_231548.csv

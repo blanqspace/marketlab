@@ -76,3 +76,4 @@ def load_json_config(
         logger.error(f"❌ Ungültige JSON-Struktur in {path}: {e}")
         return fallback or ({} if expected_type == dict else [])
 
+

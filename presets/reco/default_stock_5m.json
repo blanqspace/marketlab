@@ -1,0 +1,17 @@
+{
+  "name": "default_stock_5m",
+  "asset": "stock",
+  "duration": "5 D",
+  "barsize": "5 mins",
+  "what": "TRADES",
+  "rth": true,
+  "indicators": { "sma_fast": 10, "sma_slow": 20 },
+  "logic": "sma_cross",
+  "risk": { "min_conf": 0.50 },
+  "output": {
+    "dir": "reports/reco",
+    "write_jsonl": true,
+    "write_json": true,
+    "write_txt": true
+  }
+}

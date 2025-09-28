@@ -57,3 +57,4 @@ def send_telegram_alert(message: str, type: str = "alert") -> bool:
     }
 
     return _send_message(payload)
+

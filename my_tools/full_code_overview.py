@@ -53,3 +53,4 @@ if __name__ == "__main__":
         f.write("\n".join(output_lines))
 
     print(f"\n✅ Übersicht gespeichert in:\n{output_path}")
+

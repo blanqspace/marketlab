@@ -1,0 +1,23 @@
+{
+  "session": "2e2d7d6fce04",
+  "orders": {
+    "sent": 0,
+    "errors": 0,
+    "autocancel": 0,
+    "dryrun": 0,
+    "top_symbols": [],
+    "statuses": {}
+  },
+  "data": {
+    "ingests": 0,
+    "errors": 0,
+    "top_symbols": [],
+    "top_barsizes": [],
+    "top_durations": []
+  },
+  "backtests": {
+    "total": 0,
+    "by_kind": {}
+  },
+  "errors_top": []
+}

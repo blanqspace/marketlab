@@ -1,0 +1,6 @@
+=== Session Ende @ 2025-09-24 21:31:20Z @ 2025-09-24T21:31:20+00:00 ===
+Orders: sent=0  errors=0  autocancel=0  dryrun=0
+Datenabrufe: 0  errors=0
+Backtests: total=0
+Events:  C:\Users\shaba\OneDrive\Anlagen\robust_lab\reports\events\20250924.jsonl
+JSON:    C:\Users\shaba\OneDrive\Anlagen\robust_lab\reports\summary\sessions\20250924_213120.json

@@ -129,3 +129,4 @@ def list_by(method: str) -> List[str]:
         elif method == "historical" and info.get("historical") and not info.get("live"): res.append(s)
         elif method == "none" and not any(info.get(k) for k in ("live","delayed","historical")): res.append(s)
     return sorted(res)
+

@@ -1,197 +1,290 @@
 # main.py
 from __future__ import annotations
-import sys, subprocess
+import sys, os, json, time, glob, subprocess
 from pathlib import Path
+from datetime import datetime
 
-# Projekt-Root auf sys.path
+# --- Projekt-Root in sys.path aufnehmen ---
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from modules.trade.menu import main_menu as trade_menu
-from modules.data.ingest import ingest_one
+# Konsole robuster (UTF-8)
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 
-PY = sys.executable  # z. B. ...\Python313\python.exe
+SHOW_HINTS = True
 
-# ── Navigation ─────────────────────────────────────────────────────────────
-class GoBack(Exception): ...
-class GoMain(Exception): ...
-class QuitApp(Exception): ...
-
-def _check_nav(raw: str):
-    s = (raw or "").strip().lower()
-    if s in ("0","b","back"): raise GoBack()
-    if s in ("m","menu"):     raise GoMain()
-    if s in ("q","quit","x","exit"): raise QuitApp()
-
-def ask(label: str, default: str | None = None) -> str:
-    raw = input(f"{label}{f' [{default}]' if default is not None else ''}: ").strip()
-    if raw == "" and default is not None:
-        return default
-    _check_nav(raw)
-    return raw
-
-def ask_int(label: str, default: int | None = None, valid: list[int] | None=None) -> int:
-    while True:
-        try:
-            val = int(ask(label, str(default) if default is not None else None))
-            if valid and val not in valid:
-                print(f"Bitte eine der Optionen {valid} wählen."); continue
-            return val
-        except (GoBack, GoMain, QuitApp): raise
-        except Exception:
-            print("Bitte eine Zahl eingeben.")
-
+# ───────────────────────── Helpers ─────────────────────────
 def header(title: str):
     print("\n" + "-"*70)
     print(title)
     print("-"*70)
-    print("Hinweis: 0=Zurück  M=Menü  Q=Beenden")
+    if SHOW_HINTS:
+        print("Hinweis: 0=Zurück  M=Menü  Q=Beenden")
 
-# ── DATA ───────────────────────────────────────────────────────────────────
-def data_menu():
+def ask(prompt: str, default: str | None = None) -> str:
+    s = input(f"{prompt}{f' [{default}]' if default is not None else ''}: ").strip()
+    if s.lower() in ("q","quit","x","exit"):
+        sys.exit(0)
+    if s.lower() in ("m","menu"):
+        raise KeyboardInterrupt  # zurück ins Hauptmenü
+    if s == "" and default is not None:
+        return default
+    return s
+
+def ask_int(prompt: str, valid: list[int], default: int | None = None) -> int:
     while True:
         try:
-            header("Daten – Abruf & Prüfung")
-            print("1) Historie abrufen (Fetch → Clean → Manifest)")
-            print("2) CSV prüfen (Duplikate, Gaps)")
+            v = ask(prompt, str(default) if default is not None else None)
+            if v == "" and default is not None:
+                return default
+            n = int(v)
+            if n not in valid:
+                print(f"Bitte {valid} wählen.")
+                continue
+            return n
+        except KeyboardInterrupt:
+            raise
+        except SystemExit:
+            raise
+        except Exception:
+            print("Bitte eine Zahl eingeben.")
+
+def pause(msg="Enter=weiter ..."):
+    _ = input(msg)
+
+def read_json_safe(p: Path) -> dict:
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def pretty_ts(ts=None):
+    return (datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ") if ts is None else str(ts))
+
+# ───────────────────── Automation (Bot) ─────────────────────
+def automation_menu():
+    while True:
+        try:
+            header("Automation (Bot)")
+            print("1) Run once (ein Durchlauf jetzt)")
+            print("2) Start loop (forever, Ctrl+C zum Stoppen)")
+            print("3) Status anzeigen")
+            print("4) Config-Hinweis (bot.yaml)")
             print("0) Zurück")
-            ch = ask_int("Auswahl", valid=[0,1,2])
-            if ch == 0: return
-            if ch == 1: data_ingest_one()
-            if ch == 2: data_validate_csv()
-        except GoBack: return
-        except GoMain: return
-        except QuitApp: sys.exit(0)
+            ch = ask_int("Auswahl", valid=[0,1,2,3,4])
 
-def data_ingest_one():
-    while True:
-        try:
-            header("Daten • Historie abrufen")
-            sym      = ask("Symbol", "AAPL").upper()
-            asset_no = ask_int("Asset  1=Aktie  2=Forex", 1, [1,2])
-            asset    = "stock" if asset_no==1 else "forex"
-            duration = ask("Zeitraum (z. B. 5 D / 1 Y)", "5 D")
-            barsize  = ask("Bar-Größe (z. B. 5 mins / 1 day)", "5 mins")
-            what     = ask("Datenart (TRADES/MIDPOINT/BID/ASK)", "TRADES").upper()
-            rth      = ask("Nur Handelszeit (RTH)? (j/n)", "n").lower().startswith("j")
-            overwrite= ask("RAW überschreiben? (j/n)", "n").lower().startswith("j")
+            if ch == 0:
+                return
 
-            man = ingest_one(sym, asset, duration, barsize, what, rth, overwrite)
-            print("\n✓ Fertig.")
-            print("RAW:   ", man.get("raw"))
-            print("CLEAN: ", man.get("clean"))
-            print("MANIF.:", man.get("manifest"))
-            _ = ask("Enter=weiter", "")
+            if ch == 1:
+                try:
+                    from modules.bot.runner import run_once
+                except Exception as e:
+                    print(f"❌ Import-Fehler: {e}"); pause(); continue
+                try:
+                    run_once()
+                except KeyboardInterrupt:
+                    pass
+                except Exception as e:
+                    print(f"❌ Bot-Fehler: {e}")
+                pause()
+
+            elif ch == 2:
+                try:
+                    from modules.bot.runner import run_forever
+                except Exception as e:
+                    print(f"❌ Import-Fehler: {e}"); pause(); continue
+                print("↻ Loop startet. Beenden mit Ctrl+C …")
+                try:
+                    run_forever()
+                except KeyboardInterrupt:
+                    print("\n⏹ Loop gestoppt.")
+                except Exception as e:
+                    print(f"❌ Bot-Fehler: {e}")
+                pause()
+
+            elif ch == 3:
+                state = read_json_safe(Path("runtime/state.json"))
+                print("\nRuntime-State:", json.dumps(state, indent=2, ensure_ascii=False))
+                # jüngste Reco-Datei suchen
+                today = datetime.utcnow().strftime("%Y%m%d")
+                paths = sorted(glob.glob(f"reports/reco/{today}/reco_*.json"))
+                print("Letzte Reco:", paths[-1] if paths else "(keine)")
+                pause()
+
+            elif ch == 4:
+                p = Path("config/bot.yaml")
+                print(f"Bot-Config: {p}  ({'fehlt' if not p.exists() else 'OK'})")
+                print("Wichtige Keys: run_every_sec, auto_mode (off/ask/auto), symbols[], strategy, risk, telegram")
+                pause()
+
+        except KeyboardInterrupt:
             return
-        except (GoBack, GoMain, QuitApp): raise
-        except Exception as e:
-            print("❌", e); _ = ask("Enter=zurück", ""); return
 
-def data_validate_csv():
+# ───────────────────── Trade Hub (manuell) ─────────────────────
+def tradehub_menu():
+    try:
+        from modules.trade.menu import main_menu as trade_menu
+    except Exception as e:
+        print(f"❌ Trade-Menü Import-Fehler: {e}")
+        pause(); return
+    try:
+        trade_menu()
+    except KeyboardInterrupt:
+        return
+    except SystemExit:
+        return
+    except Exception as e:
+        print(f"❌ Trade-Menü Fehler: {e}")
+        pause()
+
+# ───────────────────────── Tools ─────────────────────────
+def tools_menu():
     while True:
         try:
-            header("Daten • CSV prüfen")
-            fpath = ask("CSV-Pfad", "data/stock_AAPL_5mins.csv")
-            bars  = ask("Bar-Größe (für Gap-Check)", "5 mins")
-            out   = ask("Gesäuberte Ausgabe-Datei (leer=keine)", "")
-            args = [PY, str(ROOT/"modules"/"data"/"validate.py"), fpath, "--barsize", bars]
-            if out: args += ["--out", out]
-            print("→", " ".join(args))
-            subprocess.run(args, check=False)
-            _ = ask("Enter=weiter", "")
-            return
-        except (GoBack, GoMain, QuitApp): raise
-
-# ── BACKTEST ───────────────────────────────────────────────────────────────
-def backtest_menu():
-    while True:
-        try:
-            header("Backtests")
-            print("1) SMA-Strategie testen")
-            print("0) Zurück")
-            ch = ask_int("Auswahl", valid=[0,1])
-            if ch == 0: return
-            if ch == 1: bt_sma()
-        except GoBack: return
-        except GoMain: return
-        except QuitApp: sys.exit(0)
-
-def bt_sma():
-    while True:
-        try:
-            header("Backtest • SMA")
-            csv   = ask("CSV (bereinigt)", "data_clean/stock_AAPL_5mins.csv")
-            fast  = ask("SMA schnell (z. B. 10)", "10")
-            slow  = ask("SMA langsam (z. B. 20)", "20")
-            execm = ask("Ausführung: close / next_open", "close")
-            spread= ask("Spread pro Trade", "0.0")
-            slip  = ask("Slippage", "0.0")
-            fee   = ask("Gebühr fix", "0.0")
-            cash  = ask("Start-Kapital", "100000")
-            risk  = ask("Kapitalanteil (0..1)", "1.0")
-            eqout = ask("Equity-CSV speichern (leer=nein)", "")
-
-            args = [PY, str(ROOT/"modules"/"backtest"/"sma.py"), csv,
-                    "--fast", fast, "--slow", slow, "--exec", execm,
-                    "--spread", spread, "--slippage", slip, "--fee", fee,
-                    "--cash", cash, "--risk", risk]
-            if eqout: args += ["--equity-out", eqout]
-
-            print("→", " ".join(args))
-            subprocess.run(args, check=False)
-            _ = ask("Enter=weiter", "")
-            return
-        except (GoBack, GoMain, QuitApp): raise
-
-# ── Diagnose-Funktionen DIREKT im Hauptmenü ────────────────────────────────
-def run_sanity_check():
-    from modules.diag.sanity import main as sanity_main
-    sanity_main()
-    _ = ask("Enter=weiter", "")
-
-def run_ibkr_status():
-    from modules.diag.status import main as status_main
-    status_main()
-    _ = ask("Enter=weiter", "")
-
-def run_symbol_scan():
-    from modules.diag.status import symbol_scan_cli
-    symbol_scan_cli()
-    _ = ask("Enter=weiter", "")
-
-def run_pnl_dashboard():
-    from modules.diag.pnl import pnl_dashboard
-    pnl_dashboard(runtime_sec=30, csv_out=True, show_positions=True)
-    _ = ask("Enter=weiter", "")
-
-# ── ROOT ───────────────────────────────────────────────────────────────────
-def main():
-    while True:
-        try:
-            header("Hauptmenü")
-            # Reihenfolge: Daten vor Handeln
-            print("1) Daten (Abruf & Prüfung)")
-            print("2) Handeln (Trade Hub)")
-            print("3) Backtests")
-            # vormals „Diagnose“
+            header("Tools")
+            print("1) Daten • Historie abrufen (ein Symbol)")
+            print("2) Daten • CSV prüfen (validate)")
+            print("3) Backtest (SMA Cross)")
             print("4) Sanity-Check")
             print("5) IBKR-Status")
             print("6) Symbol-Scan (Paper-Berechtigungen)")
-            print("7) PnL-Dashboard (Paper/LIVE)")
-            print("0) Beenden")
+            print("7) PnL-Dashboard")
+            print("0) Zurück")
             ch = ask_int("Auswahl", valid=[0,1,2,3,4,5,6,7])
-            if ch == 0: break
-            if ch == 1: data_menu()
-            if ch == 2: trade_menu()
-            if ch == 3: backtest_menu()
-            if ch == 4: run_sanity_check()
-            if ch == 5: run_ibkr_status()
-            if ch == 6: run_symbol_scan()
-            if ch == 7: run_pnl_dashboard()
-        except GoMain:  continue
-        except GoBack:  continue
-        except QuitApp: break
+
+            if ch == 0:
+                return
+
+            if ch == 1:
+                # einfacher Single-Ingest-Dialog
+                try:
+                    from modules.data.ingest import ingest_one
+                except Exception as e:
+                    print(f"❌ Import-Fehler: {e}"); pause(); continue
+                sym = ask("Symbol", "AAPL").upper()
+                asset = ask("Asset (stock/forex)", "stock")
+                duration = ask("Dauer (z. B. 5 D / 6 M / 1 Y)", "5 D")
+                barsize = ask("Bar-Größe (z. B. 1 min / 5 mins / 15 mins / 1 day)", "5 mins")
+                what = ask("WhatToShow (TRADES/MIDPOINT/BID/ASK)", "TRADES")
+                rth = ask("Nur RTH? (j/n)", "j").lower().startswith("j")
+                overwrite = ask("RAW überschreiben? (j/n)", "n").lower().startswith("j")
+                try:
+                    m = ingest_one(sym, asset=asset, duration=duration, barsize=barsize,
+                                   what=what, rth=rth, overwrite=overwrite)
+                    print("OK:", json.dumps(m, indent=2, ensure_ascii=False))
+                except Exception as e:
+                    print("❌ Ingest-Fehler:", e)
+                pause()
+
+            if ch == 2:
+                # modules/data/validate.py via Subprozess (wie gehabt)
+                csvp = ask("CSV-Pfad", "data/stock_AAPL_5mins.csv")
+                bars = ask("Bar-Größe (für Gap-Check)", "5 mins")
+                outp = ask("Gesäuberte Ausgabe-Datei (leer=keine)", "")
+                cmd = [sys.executable, str(ROOT/"modules/data/validate.py"), csvp, "--barsize", bars]
+                if outp.strip():
+                    cmd += ["--out", outp.strip()]
+                print("→", " ".join(cmd))
+                try:
+                    subprocess.run(cmd, check=False)
+                except Exception as e:
+                    print("❌ validate-Fehler:", e)
+                pause()
+
+            if ch == 3:
+                # einfacher Backtest-Aufruf
+                try:
+                    from modules.backtest.sma import run_backtest
+                except Exception as e:
+                    print(f"❌ Import-Fehler: {e}"); pause(); continue
+                csvp = ask("Clean-CSV (z. B. data_clean/stock_AAPL_5mins.csv)",
+                           "data_clean/stock_AAPL_5mins.csv")
+                fast = int(ask("SMA fast", "10"))
+                slow = int(ask("SMA slow", "20"))
+                execm = ask("Exec (close/next_open)", "close")
+                try:
+                    from pathlib import Path
+                    run_backtest(Path(csvp), fast=fast, slow=slow, exec_mode=execm)
+                except Exception as e:
+                    print("❌ Backtest-Fehler:", e)
+                pause()
+
+            if ch == 4:
+                try:
+                    from modules.diag.sanity import main as sanity_main
+                    sanity_main()
+                except SystemExit:
+                    pass
+                except Exception as e:
+                    print("❌ Sanity-Fehler:", e)
+                pause()
+
+            if ch == 5:
+                try:
+                    from modules.diag.status import main as status_main
+                    status_main()
+                except Exception as e:
+                    print("❌ IBKR-Status-Fehler:", e)
+                pause()
+
+            if ch == 6:
+                try:
+                    from modules.diag.status import symbol_scan_cli
+                    symbol_scan_cli()
+                except Exception as e:
+                    print("❌ Symbol-Scan-Fehler:", e)
+                pause()
+
+            if ch == 7:
+                try:
+                    from modules.diag.pnl import pnl_dashboard
+                    pnl_dashboard(runtime_sec=20)
+                except Exception as e:
+                    print("❌ PnL-Fehler:", e)
+                pause()
+
+        except KeyboardInterrupt:
+            return
+
+# ─────────────────────── Hauptmenü ───────────────────────
+def main_menu():
+    global SHOW_HINTS
+    while True:
+        try:
+            print("\n" + "-"*70)
+            print("Hauptmenü")
+            print("-"*70)
+            if SHOW_HINTS:
+                print("Hinweis: 0=Zurück  M=Menü  Q=Beenden")
+            print("1) Automation (Bot)")
+            print("2) Handeln (Trade Hub)")
+            print("3) Tools (Daten, Backtests, Diagnose)")
+            print("H) Hinweise an/aus")
+            print("0) Beenden")
+            raw = input("Auswahl: ").strip()
+            if raw.lower() in ("q","quit","x","exit"):
+                break
+            if raw.lower() in ("h",):
+                SHOW_HINTS = not SHOW_HINTS
+                continue
+            if raw == "1":
+                automation_menu()
+            elif raw == "2":
+                tradehub_menu()
+            elif raw == "3":
+                tools_menu()
+            elif raw == "0":
+                break
+            else:
+                print("Bitte 0–3 oder H/Q.")
+        except KeyboardInterrupt:
+            break
 
 if __name__ == "__main__":
-    main()
+    main_menu()
+

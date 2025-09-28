@@ -86,3 +86,4 @@ if __name__ == "__main__":
         f.write("\n".join(summary))
 
     print(f"\n✅ Übersicht wurde gespeichert unter:\n{SUMMARY_PATH}")
+

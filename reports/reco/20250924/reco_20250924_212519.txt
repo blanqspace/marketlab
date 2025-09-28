@@ -1,0 +1,4 @@
+Signale • Preset=default_stock_5m  stock/5 mins  @ 2025-09-24T21:25:19Z
+  AAPL     ERROR: Ingest fehlgeschlagen ('IB' object has no attribute 'qualify_or_raise'); keine Clean-CSV vorhanden.
+  MSFT     ERROR: Ingest fehlgeschlagen ('IB' object has no attribute 'qualify_or_raise'); keine Clean-CSV vorhanden.
+  SPY      ERROR: Ingest fehlgeschlagen ('IB' object has no attribute 'qualify_or_raise'); keine Clean-CSV vorhanden.

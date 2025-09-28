@@ -72,3 +72,4 @@ def write_json_file(
 
 def file_exists(path: Union[str, Path]) -> bool:
     return Path(path).exists()
+

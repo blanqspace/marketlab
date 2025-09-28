@@ -27,3 +27,4 @@ def get_active_symbols() -> List[str]:
     logger.warning("⚠️ Keine aktiven Symbole gefunden.")
     return []
 
+

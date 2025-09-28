@@ -1,0 +1,17 @@
+{
+  "symbol": "MSFT",
+  "asset": "stock",
+  "barsize": "5 mins",
+  "duration": "5 D",
+  "what": "TRADES",
+  "useRTH": true,
+  "rows_raw": 780,
+  "rows_clean": 546,
+  "gaps": 6,
+  "first": "2025-09-18T09:30:00-04:00",
+  "last": "2025-09-26T15:55:00-04:00",
+  "fetched_at": "2025-09-28T09:59:14.318935+00:00",
+  "raw": "data\\stock_MSFT_5mins.csv",
+  "clean": "data_clean\\stock_MSFT_5mins.csv",
+  "manifest": "reports\\runs\\20250928_115913\\ingest_MSFT_5mins.json"
+}

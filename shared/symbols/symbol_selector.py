@@ -60,3 +60,4 @@ def choose_symbol_source() -> Dict[str, Dict]:
     print("💾 Speichere neue Ergebnisse...")
     save_available_symbols(results)
     return results
+

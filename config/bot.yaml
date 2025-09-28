@@ -1,0 +1,21 @@
+run_every_sec: 120
+auto_mode: "ask"    # "off" | "ask" | "auto"
+symbols: ["AAPL","MSFT","SPY"]   # Tages-Watchlist
+asset: "stock"
+barsize: "5 mins"
+duration: "5 D"
+what: "TRADES"
+rth: true
+
+strategy:
+  name: "sma_cross"
+  params: { fast: 10, slow: 20 }
+
+risk:
+  default_qty: 5
+  tif: "DAY"
+
+telegram:
+  enabled: true
+  token: "YOUR_BOT_TOKEN"
+  chat_id: "123456789"

@@ -27,3 +27,4 @@ def load_cached_symbols():
             return json.load(f)
     except Exception:
         return None
+

@@ -60,3 +60,4 @@ def cache_symbols(symbols: List[str]) -> None:
         logger.info(f"💾 {len(symbols)} Symbole im Cache gespeichert")
     except Exception as e:
         logger.error(f"❌ Fehler beim Speichern des Symbol-Cache: {e}")
+

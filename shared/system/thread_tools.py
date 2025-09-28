@@ -98,3 +98,4 @@ def get_thread_status_json() -> str:
     except Exception as e:
         logger.error(f"❌ Fehler beim Serialisieren von Thread-Status: {e}")
         return "{}"
+

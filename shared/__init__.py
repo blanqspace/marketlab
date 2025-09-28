@@ -50,3 +50,4 @@ def load_symbols_from_json(path: Path = CONFIG_PATH) -> Optional[List[str]]:
         else:
             logger.warning("⚠️ Symbolformat in JSON ungültig")
     return None
+

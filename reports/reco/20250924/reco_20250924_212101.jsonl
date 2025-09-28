@@ -1,0 +1,3 @@
+{"ts": "2025-09-24T21:21:01Z", "preset": "default_stock_5m", "asset": "stock", "symbol": "AAPL", "barsize": "5 mins", "duration": "5 D", "logic": "sma_cross", "ok": false, "error": "'IB' object has no attribute 'qualify_or_raise'"}
+{"ts": "2025-09-24T21:21:02Z", "preset": "default_stock_5m", "asset": "stock", "symbol": "MSFT", "barsize": "5 mins", "duration": "5 D", "logic": "sma_cross", "ok": false, "error": "IBKR-Verbindung fehlgeschlagen: "}
+{"ts": "2025-09-24T21:21:06Z", "preset": "default_stock_5m", "asset": "stock", "symbol": "SPY", "barsize": "5 mins", "duration": "5 D", "logic": "sma_cross", "ok": false, "error": "'IB' object has no attribute 'qualify_or_raise'"}

@@ -27,3 +27,4 @@ def autocorrect(sym: str) -> str:
     uni = list(data.keys())
     m = difflib.get_close_matches(s, uni, n=1, cutoff=0.6)
     return m[0] if m else s
+

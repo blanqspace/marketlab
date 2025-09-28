@@ -30,3 +30,4 @@ def write_session_summary(title: str, lines: list[str]):
         fh.write(f"\n=== {title} @ {_ts()} ===\n")
         for ln in lines:
             fh.write(ln.rstrip() + "\n")
+

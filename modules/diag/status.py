@@ -181,3 +181,4 @@ def symbol_scan_cli():
 
 if __name__ == "__main__":
     main()
+

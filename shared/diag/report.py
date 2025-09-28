@@ -249,3 +249,4 @@ def write_session_summary(title: str, lines: list[str] | None = None, day: datet
         "day_json": json_file,
         "events": ev_file,
     }
+

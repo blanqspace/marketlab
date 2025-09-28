@@ -1,0 +1,18 @@
+[
+  {
+    "ts": "2025-09-24T21:25:38Z",
+    "preset": "default_stock_5m",
+    "asset": "stock",
+    "symbol": "SPY",
+    "barsize": "5 mins",
+    "duration": "5 D",
+    "logic": "sma_cross",
+    "workflow": [
+      "— SPY —",
+      "→ Ingest starte: SPY | stock | 5 D | 5 mins | TRADES | RTH=True",
+      "❌ Fehler: Ingest fehlgeschlagen ('IB' object has no attribute 'qualify_or_raise'); keine Clean-CSV vorhanden."
+    ],
+    "ok": false,
+    "error": "Ingest fehlgeschlagen ('IB' object has no attribute 'qualify_or_raise'); keine Clean-CSV vorhanden."
+  }
+]

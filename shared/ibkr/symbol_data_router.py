@@ -20,3 +20,4 @@ def get_data_method(symbol: str) -> Method:
     if info.get("delayed"): return "delayed"
     if info.get("historical"): return "historical"
     return "none"
+

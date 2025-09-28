@@ -86,3 +86,4 @@ def interactive_symbol_selection(default_list=None):
     except Exception:
         print("❌ Ungültige Auswahl.")
         return None
+
