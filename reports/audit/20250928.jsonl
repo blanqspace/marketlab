@@ -1,0 +1,14 @@
+{"type": "dequeue", "ts": 1759095669.946744, "cmd": "SAFE_ON", "args": {}, "src": "telegram"}
+{"type": "enqueue", "ts": 1759095669.946744, "cmd": "SAFE_ON", "args": {}, "src": "telegram"}
+{"type": "enqueue", "ts": 1759095671.9504669, "cmd": "STATUS", "args": {}, "src": "telegram"}
+{"type": "dequeue", "ts": 1759095671.9504669, "cmd": "STATUS", "args": {}, "src": "telegram"}
+{"type": "dequeue", "ts": 1759095675.9533193, "cmd": "SAFE_OFF", "args": {}, "src": "telegram"}
+{"type": "enqueue", "ts": 1759095675.9533193, "cmd": "SAFE_OFF", "args": {}, "src": "telegram"}
+{"type": "dequeue", "ts": 1759095745.8876214, "cmd": "RUN_ONCE", "args": {}, "src": "terminal"}
+{"type": "enqueue", "ts": 1759095745.8876214, "cmd": "RUN_ONCE", "args": {}, "src": "terminal"}
+{"type": "enqueue", "ts": 1759095755.399945, "cmd": "LOOP_ON", "args": {}, "src": "terminal"}
+{"type": "dequeue", "ts": 1759095755.399945, "cmd": "LOOP_ON", "args": {}, "src": "terminal"}
+{"type": "enqueue", "ts": 1759095796.8570058, "cmd": "SAFE_ON", "args": {}, "src": "terminal"}
+{"type": "enqueue", "ts": 1759095819.0534143, "cmd": "LOOP_OFF", "args": {}, "src": "terminal"}
+{"type": "dequeue", "ts": 1759095831.7538989, "cmd": "STATUS", "args": {}, "src": "terminal"}
+{"type": "enqueue", "ts": 1759095831.7538989, "cmd": "STATUS", "args": {}, "src": "terminal"}

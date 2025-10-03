@@ -1,4 +1,0 @@
-Signale • Preset=default_stock_5m  stock/5 mins  @ 2025-09-24T21:21:06Z
-  AAPL     ERROR: 'IB' object has no attribute 'qualify_or_raise'
-  MSFT     ERROR: IBKR-Verbindung fehlgeschlagen: 
-  SPY      ERROR: 'IB' object has no attribute 'qualify_or_raise'

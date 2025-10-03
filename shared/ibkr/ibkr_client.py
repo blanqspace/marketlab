@@ -4,7 +4,7 @@ import os
 import asyncio
 from ib_insync import IB, Contract
 from shared.utils.logger import get_logger
-from shared.core.client_registry import registry  # globales Singleton
+from shared.core.client_registry import registry  # Singleton aus deinem Projekt
 
 logger = get_logger("ibkr_client")
 
@@ -12,39 +12,31 @@ logger = get_logger("ibkr_client")
 class IBKRClient:
     """
     Dünner Wrapper um ib_insync.IB mit Registry-Status.
-    - Vergibt Client-ID anhand Registry (wenn module angegeben)
-    - Meldet Verbindungsstatus in der Registry
+    - Vergibt Client-ID aus registry (wenn module angegeben)
+    - Meldet Verbindungsstatus in registry
     - Context-Manager: with IBKRClient(...) as ib:
     """
 
     def __init__(self, client_id: int | None = None, module: str | None = None, task: str | None = None):
-        """
-        Args:
-            client_id: explizite IBKR-Client-ID (optional)
-            module: z. B. "data_manager", "symbol_fetcher_pool", "realtime"
-            task: freier Task-Name für Status/Monitoring (z. B. "fetch_AAPL")
-        """
         self.module = module
         self.task = task or module or "unbenannt"
         self.client_id = client_id or self._resolve_client_id()
         self.host = os.getenv("TWS_HOST", "127.0.0.1")
         self.port = int(os.getenv("TWS_PORT", 4002))
         self.ib = IB()
+        self._auto_reconnect = False  # merkt, ob wir Event registriert haben
 
-        # initialer Status (noch nicht verbunden)
         registry.set_status(self.client_id, self.task, connected=False, module=self.module)
 
-    # ── Context-Manager ─────────────────────────────────────────────────────
-
+    # ── Context-Manager ─────────────────────────────────────────────
     def __enter__(self) -> IB:
         return self.connect()
 
     def __exit__(self, exc_type, exc, tb):
         self.disconnect()
-        return False  # Exception nicht unterdrücken
+        return False
 
-    # ── Client-ID Auflösung ─────────────────────────────────────────────────
-
+    # ── Client-ID Auflösung ────────────────────────────────────────
     def _resolve_client_id(self) -> int:
         if self.module:
             if self.module.endswith("_pool"):
@@ -58,10 +50,10 @@ class IBKRClient:
         logger.warning("⚠️ Keine gültige client_id gefunden – Fallback 127")
         return 127
 
-    # ── Verbindungssteuerung ────────────────────────────────────────────────
-
+    # ── Verbindungssteuerung ───────────────────────────────────────
     def connect(self, auto_reconnect: bool = False) -> IB:
         try:
+            # eigenen asyncio-Loop sicherstellen (ib_insync nutzt asyncio)
             try:
                 asyncio.get_running_loop()
             except RuntimeError:
@@ -71,8 +63,13 @@ class IBKRClient:
             logger.info(f"✅ Verbunden @ {self.host}:{self.port} (Client ID: {self.client_id})")
             registry.update_connected(self.client_id, connected=True)
 
-            if auto_reconnect:
-                self.ib.setCallback('disconnected', self._on_disconnect)
+            self._auto_reconnect = bool(auto_reconnect)
+            if self._auto_reconnect:
+                # korrektes Event-Modell von ib_insync
+                try:
+                    self.ib.disconnectedEvent += self._on_disconnect  # type: ignore[attr-defined]
+                except Exception:
+                    pass
 
             return self.ib
         except Exception as e:
@@ -80,12 +77,19 @@ class IBKRClient:
             registry.update_connected(self.client_id, connected=False)
             raise ConnectionError(f"IBKR-Verbindung fehlgeschlagen: {e}") from e
 
-    def _on_disconnect(self):
+    def _on_disconnect(self, *args, **kwargs):
         logger.warning("⚠️ IBKR-Verbindung verloren – Status aktualisiert")
         registry.update_connected(self.client_id, connected=False)
 
     def disconnect(self):
         try:
+            # Event deregistrieren, falls wir es registriert hatten
+            if self._auto_reconnect:
+                try:
+                    self.ib.disconnectedEvent -= self._on_disconnect  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+
             if self.ib.isConnected():
                 self.ib.disconnect()
                 logger.info(f"✅ Verbindung getrennt (Client ID: {self.client_id})")
@@ -95,10 +99,9 @@ class IBKRClient:
             registry.update_connected(self.client_id, connected=False)
             self.ib = IB()  # frische Instanz
 
-    # ── Status ──────────────────────────────────────────────────────────────
-
+    # ── Status ─────────────────────────────────────────────────────
     def is_connected(self) -> bool:
-        return self.ib.isConnected()
+        return getattr(self.ib, "isConnected", lambda: False)()
 
     def status(self) -> dict:
         if not self.is_connected():
@@ -110,23 +113,28 @@ class IBKRClient:
                 "port": self.port,
             }
         try:
+            sv = None
+            try:
+                sv_attr = getattr(self.ib.client, "serverVersion", None)
+                sv = sv_attr() if callable(sv_attr) else sv_attr
+            except Exception:
+                sv = None
+
             return {
                 "connected": True,
                 "client_id": self.client_id,
                 "task": self.task,
                 "host": self.host,
                 "port": self.port,
-                "server_time": str(self.ib.serverTime()),
-                "tws_version": self.ib.twsConnectionTime(),
+                "server_time": str(self.ib.reqCurrentTime()),
+                "tws_version": sv,
                 "account_list": self.ib.managedAccounts(),
             }
         except Exception as e:
             return {"connected": True, "client_id": self.client_id, "task": self.task, "warning": str(e)}
 
-    # ── Hilfen: Contracts & Preise ──────────────────────────────────────────
-
+    # ── Hilfen: Contracts & Preise ─────────────────────────────────
     def qualify_or_raise(self, c: Contract) -> Contract:
-        """Qualifiziert Contract. Wirft klaren Fehler bei Unknown Contract."""
         qc = self.ib.qualifyContracts(c)
         if not qc or not getattr(qc[0], "conId", 0):
             sym = getattr(c, "localSymbol", getattr(c, "symbol", "?"))
@@ -134,7 +142,6 @@ class IBKRClient:
         return qc[0]
 
     def mid_or_last(self, c: Contract, delay_ok: bool = True) -> float | None:
-        """Mid, sonst last/close. None wenn nichts verfügbar."""
         try:
             self.ib.reqMarketDataType(3 if delay_ok else 1)
         except Exception:
@@ -155,9 +162,6 @@ class IBKRClient:
 
     def fetch_hist(self, contract: Contract, *, duration: str, barsize: str,
                    what: str = "TRADES", rth: bool = True):
-        """
-        Wrapper um reqHistoricalData. Existiert hier, damit Menü/Module das konsistent nutzen.
-        """
         c = self.qualify_or_raise(contract)
         return self.ib.reqHistoricalData(
             c,
@@ -167,4 +171,3 @@ class IBKRClient:
             whatToShow=what,
             useRTH=rth,
         )
-

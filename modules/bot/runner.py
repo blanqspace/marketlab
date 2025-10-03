@@ -8,7 +8,7 @@ from modules.data.ingest import ingest_one
 from modules.signal.engine import compute_signal_sma  # neu (unten)
 from modules.trade.ops import place_orders        # vorhanden
 from shared.utils.logger import get_logger
-from shared.system.telegram_notifier import send_telegram_alert
+from shared.system.telegram_notifier import send_alert
 
 CFG = Path("config/bot.yaml")
 RUNTIME = Path("runtime/state.json")
@@ -43,9 +43,10 @@ def decide_action(sig):
     return "HOLD"
 
 def notify(lines, cfg):
-    if cfg.get("telegram",{}).get("enabled"):
-        try: send_telegram_alert("\n".join(lines))
-        except Exception: pass
+    if cfg.get("telegram", {}).get("enabled"):
+        ok = send_alert("\n".join(lines))
+        if not ok:
+            print("❌ Telegram-Senden fehlgeschlagen. Siehe Logs.")
 
 def write_reco(cycle_id, items):
     d = RECO_DIR / datetime.now().strftime("%Y%m%d")
@@ -89,7 +90,7 @@ def run_once():
     feed.append(f"✓ Signals → {fp}")
 
     # 2) Ausführung (je nach Modus)
-    mode = (cfg.get("auto_mode") or "off").lower()
+    mode = cfg.get("exec", {}).get("mode", "off").lower()
     if mode == "off":
         feed.append("exec: OFF (nur Signale)")
     else:

@@ -1,8 +1,0 @@
-{"ts": "2025-09-23T20:27:37+00:00", "session": "2e2d7d6fce04", "kind": "order_error", "payload": {"symbol": "AAPL", "message": "'IB' object has no attribute 'qualify_or_raise'"}}
-{"ts": "2025-09-23T20:28:35+00:00", "session": "2e2d7d6fce04", "kind": "order_error", "payload": {"symbol": "AAPL", "message": "'IB' object has no attribute 'qualify_or_raise'"}}
-{"ts": "2025-09-23T20:34:40+00:00", "session": "2e2d7d6fce04", "kind": "order_sent", "payload": {"symbol": "AAPL", "preset": "scalp_stock", "status": "PreSubmitted"}}
-{"ts": "2025-09-23T20:35:19+00:00", "session": "2e2d7d6fce04", "kind": "order_sent", "payload": {"symbol": "GOOG", "preset": "short_stock", "status": "PreSubmitted"}}
-{"ts": "2025-09-23T20:36:39+00:00", "session": "2e2d7d6fce04", "kind": "order_autocancel", "payload": {"ids": [50]}}
-{"ts": "2025-09-23T20:38:04+00:00", "session": "2e2d7d6fce04", "kind": "data_validate", "payload": {"file": "data/stock_AAPL_5mins.csv", "barsize": "5 mins", "out": ""}}
-{"ts": "2025-09-23T21:06:21+00:00", "session": "2e2d7d6fce04", "kind": "order_sent", "payload": {"symbol": "AAPL", "preset": "short_stock", "status": "PreSubmitted"}}
-{"ts": "2025-09-23T21:16:55+00:00", "session": "2e2d7d6fce04", "kind": "order_autocancel", "payload": {"ids": [55, 60]}}

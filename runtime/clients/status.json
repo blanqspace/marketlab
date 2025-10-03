@@ -4,32 +4,32 @@
     "module": "internal",
     "connected": false,
     "first_seen": "2025-09-17T19:29:36.212228+00:00",
-    "last_update": "2025-09-28T09:59:07.330067+00:00",
+    "last_update": "2025-10-03T14:26:50.797189+00:00",
     "last_heartbeat": null
   },
   "102": {
-    "task": "cancel",
+    "task": "list",
     "module": "order_executor",
-    "connected": false,
+    "connected": true,
     "first_seen": "2025-09-17T19:31:25.091987+00:00",
-    "last_update": "2025-09-27T22:46:35.988525+00:00",
-    "last_heartbeat": "2025-09-27T22:46:35.680604+00:00"
+    "last_update": "2025-10-03T14:27:31.507517+00:00",
+    "last_heartbeat": "2025-10-03T14:27:31.507528+00:00"
   },
   "101": {
     "task": "hist_SPY",
     "module": "data_manager",
     "connected": false,
     "first_seen": "2025-09-17T19:44:44.498190+00:00",
-    "last_update": "2025-09-28T09:59:15.388937+00:00",
-    "last_heartbeat": "2025-09-28T09:59:14.473218+00:00"
+    "last_update": "2025-09-28T10:11:31.521112+00:00",
+    "last_heartbeat": "2025-09-28T10:11:30.534358+00:00"
   },
   "127": {
-    "task": "exec",
-    "module": "bot",
+    "task": "status",
+    "module": "diag",
     "connected": false,
     "first_seen": "2025-09-21T15:43:28.696804+00:00",
-    "last_update": "2025-09-28T09:59:15.543950+00:00",
-    "last_heartbeat": "2025-09-28T09:59:15.542638+00:00"
+    "last_update": "2025-10-03T10:21:07.770928+00:00",
+    "last_heartbeat": "2025-10-03T10:21:07.766811+00:00"
   },
   "104": {
     "task": "pnl_view",
@@ -38,5 +38,21 @@
     "first_seen": "2025-09-23T20:58:14.453368+00:00",
     "last_update": "2025-09-23T21:12:24.571541+00:00",
     "last_heartbeat": "2025-09-23T21:11:53.865526+00:00"
+  },
+  "105": {
+    "task": "hist_SPY",
+    "module": "data_manager",
+    "connected": false,
+    "first_seen": "2025-09-28T10:39:15.288252+00:00",
+    "last_update": "2025-10-03T14:25:40.781773+00:00",
+    "last_heartbeat": "2025-10-03T14:25:40.374955+00:00"
+  },
+  "150": {
+    "task": "price",
+    "module": "diag",
+    "connected": false,
+    "first_seen": "2025-10-03T10:27:56.332289+00:00",
+    "last_update": "2025-10-03T10:27:57.270313+00:00",
+    "last_heartbeat": "2025-10-03T10:27:56.457042+00:00"
   }
 }

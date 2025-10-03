@@ -13,6 +13,14 @@ from ib_insync import MarketOrder, LimitOrder, StopOrder, StopLimitOrder, Execut
 from shared.ibkr.ibkr_client import IBKRClient
 from .common import is_paper, contract_for, mid_or_last, fmt_price
 
+# Telegram-Routing
+try:
+    from shared.system.telegram_notifier import to_orders, to_logs, to_alerts
+except Exception:
+    def to_orders(_): pass
+    def to_logs(_): pass
+    def to_alerts(_): pass
+
 ACTIVE = {"Submitted","PreSubmitted","ApiPending","PendingSubmit","PendingCancel","PartiallyFilled"}
 
 # ---------- intern ----------
@@ -20,17 +28,27 @@ def _build_order(order_type: str, side: str, qty: float,
                  lmt: Optional[float], stp: Optional[float], tif: str):
     side = side.upper()
     ot = order_type.upper()
+
     if ot in ("MKT","MARKET"):
-        return MarketOrder(side, totalQuantity=qty, tif=tif)
+        return MarketOrder(side, qty, tif=tif)
+
     if ot in ("LMT","LIMIT"):
-        if lmt is None: raise ValueError("Limit-Preis erforderlich für LIMIT")
-        return LimitOrder(side, totalQuantity=qty, lmtPrice=float(lmt), tif=tif)
+        if lmt is None:
+            raise ValueError("Limit-Preis erforderlich für LIMIT")
+        return LimitOrder(side, qty, float(lmt), tif=tif)
+
     if ot in ("STP","STOP"):
-        if stp is None: raise ValueError("Stop-Preis erforderlich für STOP")
-        return StopOrder(side, totalQuantity=qty, auxPrice=float(stp), tif=tif)
+        if stp is None:
+            raise ValueError("Stop-Preis erforderlich für STOP")
+        # StopOrder(action, totalQuantity, auxPrice, ...)
+        return StopOrder(side, qty, float(stp), tif=tif)
+
     if ot.replace("_"," ") in ("STP LMT","STOP LIMIT"):
-        if stp is None or lmt is None: raise ValueError("Stop- und Limit-Preis erforderlich für STOP_LIMIT")
-        return StopLimitOrder(side, totalQuantity=qty, auxPrice=float(stp), lmtPrice=float(lmt), tif=tif)
+        if stp is None or lmt is None:
+            raise ValueError("Stop- und Limit-Preis erforderlich für STOP_LIMIT")
+        # StopLimitOrder(action, totalQuantity, auxPrice, lmtPrice, ...)
+        return StopLimitOrder(side, qty, float(stp), float(lmt), tif=tif)
+
     raise ValueError(f"Unbekannter Ordertyp: {order_type}")
 
 def _safe_prices(side: str, mid: Optional[float], dev_pct: float,
@@ -63,17 +81,19 @@ def place_orders(
     symbols = [s.strip().upper() for s in symbols if s.strip()]
     with IBKRClient(module="order_executor", task=f"place_{order_type}") as ib:
         if not is_paper(ib):
-            print("⚠️  Hinweis: Kein DU… Paper-Account erkannt.")
+            msg = "⚠️ Hinweis: Kein DU… Paper-Account erkannt."
+            print(msg); to_alerts(msg)
         for sym in symbols:
             c = contract_for(sym, asset)
             try:
-                # Qualifizieren (keine eigene qualify_or_raise nötig)
                 q = ib.qualifyContracts(c)
                 if not q:
-                    print(f"❌ {sym}: Unknown/ungültiger Contract."); continue
+                    msg = f"❌ {sym}: Unknown/ungültiger Contract."
+                    print(msg); to_alerts(msg); continue
                 c = q[0]
             except Exception as e:
-                print(f"❌ {sym}: Contract-Qualifizierung fehlgeschlagen: {e}"); continue
+                msg = f"❌ {sym}: Contract-Qualifizierung fehlgeschlagen: {e}"
+                print(msg); to_alerts(msg); continue
 
             mid = mid_or_last(ib, c)
             lmt_adj, stp_adj = _safe_prices(side, mid, safe_dev, order_type, lmt, stp)
@@ -81,18 +101,22 @@ def place_orders(
             try:
                 order = _build_order(order_type, side, qty, lmt_adj, stp_adj, tif)
             except Exception as e:
-                print(f"❌ {sym}: {e}"); continue
+                msg = f"❌ {sym}: {e}"
+                print(msg); to_alerts(msg); continue
 
-            print(f"→ {sym}: {side} {qty} {order_type}  LMT={getattr(order,'lmtPrice',None)} STP={getattr(order,'auxPrice',None)}  TIF={tif}  (mid={mid})")
+            line = f"→ {sym}: {side} {qty} {order_type}  LMT={getattr(order,'lmtPrice',None)} STP={getattr(order,'auxPrice',None)}  TIF={tif}  (mid={mid})"
+            print(line); to_orders(line)
             if dry_run:
-                print("🧪 Dry-Run – nicht gesendet."); continue
+                print("🧪 Dry-Run – nicht gesendet."); to_logs("🧪 Dry-Run – nicht gesendet."); continue
 
             tr = ib.placeOrder(c, order); ib.sleep(0.5)
-            print(f"✓ id={tr.order.orderId} status={tr.orderStatus.status}")
+            ok = f"✓ id={tr.order.orderId} status={tr.orderStatus.status}"
+            print(ok); to_orders(ok)
             if cancel_after and cancel_after > 0:
                 ib.sleep(cancel_after)
                 ib.cancelOrder(order); ib.sleep(0.5)
-                print(f"✖ auto-cancel → {tr.orderStatus.status}")
+                msg = f"✖ auto-cancel → {tr.orderStatus.status}"
+                print(msg); to_orders(msg)
 
 def list_orders(show_all: bool = True, show_exec: bool = False, show_pos: bool = False) -> None:
     with IBKRClient(module="order_executor", task="list") as ib:
@@ -101,12 +125,12 @@ def list_orders(show_all: bool = True, show_exec: bool = False, show_pos: bool =
         if not show_all:
             trades = [t for t in trades if t.orderStatus and t.orderStatus.status in ACTIVE]
 
-        print("\nAlle Orders (kompakt):")
+        print("\nAlle Orders (kompakt):"); to_logs("Alle Orders (kompakt):")
         if not trades:
-            print("(keine)")
+            print("(keine)"); to_logs("(keine)")
         else:
             hdr = f"{'ID':>6}  {'Symbol':<12} {'Side':<4} {'Qty':>7}  {'Type/Price':<18} {'TIF':<6} {'Route':<8}  {'Status':<14}  {'Filled/Rem':>12}"
-            print(hdr); print("-"*len(hdr))
+            print(hdr); print("-"*len(hdr)); to_logs(hdr)
             for tr in trades:
                 o, s, c = tr.order, tr.orderStatus, tr.contract
                 sym = getattr(c, "localSymbol", getattr(c, "symbol", "?"))
@@ -118,26 +142,31 @@ def list_orders(show_all: bool = True, show_exec: bool = False, show_pos: bool =
                 st   = s.status if s and s.status else "-"
                 filled = getattr(s, "filled", 0) or 0
                 rem    = getattr(s, "remaining", 0) or 0
-                print(f"{o.orderId:>6}  {sym:<12} {side:<4} {qty:>7}  {typ:<18} {tif:<6} {route:<8}  {st:<14}  {filled:>5}/{rem:<6}")
+                line = f"{o.orderId:>6}  {sym:<12} {side:<4} {qty:>7}  {typ:<18} {tif:<6} {route:<8}  {st:<14}  {filled:>5}/{rem:<6}"
+                print(line); to_logs(line)
 
         if show_exec:
-            print("\nAusführungen (heute):")
+            print("\nAusführungen (heute):"); to_logs("Ausführungen (heute):")
             ex = ib.reqExecutions(ExecutionFilter())
-            if not ex: print("(keine)")
+            if not ex:
+                print("(keine)"); to_logs("(keine)")
             else:
                 for f in ex:
                     sym = getattr(f.contract, "localSymbol", "?")
-                    print(f"{f.time}  {sym}  {f.side}  {f.shares}@{f.price}  execId={f.execId}")
+                    line = f"{f.time}  {sym}  {f.side}  {f.shares}@{f.price}  execId={f.execId}"
+                    print(line); to_logs(line)
 
         if show_pos:
-            print("\nPositionen:")
+            print("\nPositionen:"); to_logs("Positionen:")
             pos = ib.positions()
-            if not pos: print("(keine)")
+            if not pos:
+                print("(keine)"); to_logs("(keine)")
             else:
                 for p in pos:
                     c = p.contract
                     sym = getattr(c, "localSymbol", getattr(c, "symbol", "?"))
-                    print(f"{sym:<12} {p.position:>8} @ {p.avgCost}")
+                    line = f"{sym:<12} {p.position:>8} @ {p.avgCost}"
+                    print(line); to_logs(line)
 
 def cancel_orders(order_id: Optional[int] = None, symbol: Optional[str] = None, cancel_all: bool = False) -> List[int]:
     with IBKRClient(module="order_executor", task="cancel") as ib:
@@ -158,12 +187,12 @@ def cancel_orders(order_id: Optional[int] = None, symbol: Optional[str] = None, 
                 if st.status in ACTIVE and csym == sym:
                     target.append(t)
         if not target:
-            print("Keine passenden offenen Orders gefunden."); return []
+            msg = "Keine passenden offenen Orders gefunden."
+            print(msg); to_logs(msg); return []
         for tr in target:
             ib.cancelOrder(tr.order)
         ib.sleep(0.5)
         ids = [t.order.orderId for t in target]
-        print(f"✅ Storno gesendet für {len(ids)}: {ids}")
+        msg = f"✅ Storno gesendet für {len(ids)}: {ids}"
+        print(msg); to_orders(msg)
         return ids
-
-
