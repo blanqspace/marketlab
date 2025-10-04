@@ -37,3 +37,5 @@ Thumbs.db
 
 # 📊 Große Datenordner (lokale Market-Daten, nicht versionieren)
 data/
+
+my_tools/
