@@ -46,6 +46,10 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
 def _ensure_dirs():
     for p in ["data", "data_clean", "reports/reco", "runtime"]:
         Path(p).mkdir(parents=True, exist_ok=True)
+    # runtime defaults
+    sm = Path("runtime") / "safe_mode.json"
+    if not sm.exists():
+        sm.write_text(json.dumps({"safe": False}, ensure_ascii=False, indent=2), encoding="utf-8")
 
 def _read_csv_closes(csv_path: Path) -> Tuple[List[str], List[float]]:
     if not csv_path.exists():
@@ -144,6 +148,10 @@ def _load_state() -> Dict[str, Any]:
     p = Path("runtime/bot_state.json")
     if not p.exists():
         return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
 
 def _safe_on() -> bool:
     p = Path("runtime/safe_mode.json")
@@ -153,10 +161,6 @@ def _safe_on() -> bool:
         return bool(json.loads(p.read_text(encoding="utf-8")).get("safe", False))
     except Exception:
         return False
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
 
 # ----------------------------- Public API --------------------------------
 def run_once(cfg_path: str = "config/bot.yaml") -> None:
@@ -213,6 +217,11 @@ def run_once(cfg_path: str = "config/bot.yaml") -> None:
     tif = exec_cfg.get("tif", "DAY")
     order_type = (exec_cfg.get("order_type", "MKT") or "MKT").upper()
 
+    # SAFE → Exec deaktivieren
+    if _safe_on():
+        to_logs("SAFE aktiv → Exec wird nicht ausgeführt.")
+        mode = "OFF"
+
     placed = 0
     if mode == "AUTO":
         to_place: List[str] = []
@@ -253,7 +262,6 @@ def run_once(cfg_path: str = "config/bot.yaml") -> None:
             # Kollisionsschutz im Loop:
             if still_active and age <= ask_window + 5:
                 to_control("ASK noch aktiv → Skip in dieser Iteration.")
-                # trotzdem Status-Infos zu den Signalen posten
             elif still_active and age > ask_window + 5:
                 # Hängenden Flow aufräumen
                 to_control("ASK hängt → sende Cancel und starte neu.")
@@ -307,19 +315,14 @@ def start_loop(cfg_path: str = "config/bot.yaml", interval_sec: int | None = Non
     # Intervall an ASK-Fenster anpassen: itv >= ask_window + 30
     try:
         ask_window = int(cfg.get("telegram", {}).get("ask_window_sec", 120))
-        itv = max(itv, ask_window + 30)
-    except Exception:
-        pass
-
-        try:
-        ask_window = int(cfg.get("telegram", {}).get("ask_window_sec", 120))
+        # harte Untergrenze: kein Überlappen des ASK-Fensters
         if itv < ask_window + 30:
             to_logs(f"Intervall {itv}s < ask_window+30 ({ask_window+30}s) → setze auf {ask_window+30}s.")
             itv = ask_window + 30
     except Exception:
         pass
 
-info = f"⏱  Bot-Loop gestartet (alle {itv}s). Abbruch mit Ctrl+C."
+    info = f"⏱  Bot-Loop gestartet (alle {itv}s). Abbruch mit Ctrl+C."
     print(info); to_control(info)
     try:
         while True:
@@ -356,3 +359,7 @@ def ask_flow_status_cli():
     except Exception as e:
         err = f"❌ ASK-Flow Status-Fehler: {e}"
         print(err); to_alerts(err)
+
+if __name__ == "__main__":
+    # Einfacher Start für Tests: ein einzelner Zyklus
+    run_once()

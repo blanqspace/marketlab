@@ -1,0 +1,17 @@
+{
+  "symbol": "SPY",
+  "asset": "stock",
+  "barsize": "5 mins",
+  "duration": "5 D",
+  "what": "TRADES",
+  "useRTH": true,
+  "rows_raw": 39048,
+  "rows_clean": 936,
+  "gaps": 11,
+  "first": "2025-09-18T09:30:00-04:00",
+  "last": "2025-10-03T15:55:00-04:00",
+  "fetched_at": "2025-10-04T21:14:26.680291+00:00",
+  "raw": "data\\stock_SPY_5mins.csv",
+  "clean": "data_clean\\stock_SPY_5mins.csv",
+  "manifest": "reports\\runs\\20251004_231419\\ingest_SPY_5mins.json"
+}
