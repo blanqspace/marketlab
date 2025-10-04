@@ -5,13 +5,13 @@
   "duration": "5 D",
   "what": "TRADES",
   "useRTH": true,
-  "rows_raw": 18261,
-  "rows_clean": 867,
+  "rows_raw": 32416,
+  "rows_clean": 936,
   "gaps": 11,
   "first": "2025-09-18T09:30:00-04:00",
-  "last": "2025-10-03T10:10:00-04:00",
-  "fetched_at": "2025-10-03T14:25:33.727397+00:00",
+  "last": "2025-10-03T15:55:00-04:00",
+  "fetched_at": "2025-10-03T21:10:24.546351+00:00",
   "raw": "data\\stock_MSFT_5mins.csv",
   "clean": "data_clean\\stock_MSFT_5mins.csv",
-  "manifest": "reports\\runs\\20251003_162532\\ingest_MSFT_5mins.json"
+  "manifest": "reports\\runs\\20251003_231015\\ingest_MSFT_5mins.json"
 }

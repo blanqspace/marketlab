@@ -5,13 +5,13 @@
   "duration": "5 D",
   "what": "TRADES",
   "useRTH": true,
-  "rows_raw": 18650,
-  "rows_clean": 866,
+  "rows_raw": 33139,
+  "rows_clean": 936,
   "gaps": 11,
   "first": "2025-09-18T09:30:00-04:00",
-  "last": "2025-10-03T10:05:00-04:00",
-  "fetched_at": "2025-10-03T14:25:29.135552+00:00",
+  "last": "2025-10-03T15:55:00-04:00",
+  "fetched_at": "2025-10-03T21:08:51.998317+00:00",
   "raw": "data\\stock_AAPL_5mins.csv",
   "clean": "data_clean\\stock_AAPL_5mins.csv",
-  "manifest": "reports\\runs\\20251003_162527\\ingest_AAPL_5mins.json"
+  "manifest": "reports\\runs\\20251003_230844\\ingest_AAPL_5mins.json"
 }

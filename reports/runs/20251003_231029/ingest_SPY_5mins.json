@@ -5,13 +5,13 @@
   "duration": "5 D",
   "what": "TRADES",
   "useRTH": true,
-  "rows_raw": 18261,
-  "rows_clean": 867,
+  "rows_raw": 32028,
+  "rows_clean": 936,
   "gaps": 11,
   "first": "2025-09-18T09:30:00-04:00",
-  "last": "2025-10-03T10:10:00-04:00",
-  "fetched_at": "2025-10-03T14:25:41.042397+00:00",
+  "last": "2025-10-03T15:55:00-04:00",
+  "fetched_at": "2025-10-03T21:10:37.302373+00:00",
   "raw": "data\\stock_SPY_5mins.csv",
   "clean": "data_clean\\stock_SPY_5mins.csv",
-  "manifest": "reports\\runs\\20251003_162540\\ingest_SPY_5mins.json"
+  "manifest": "reports\\runs\\20251003_231029\\ingest_SPY_5mins.json"
 }

@@ -1,120 +1,108 @@
 # telegram/bot_control.py
 from __future__ import annotations
-import os, time, json, requests, sys
-from pathlib import Path
-from typing import Dict, Any, Tuple
 
-# Projektroot für Imports
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
+import os, time, json, threading
+import requests
+from typing import Set
 
-from shared.core.config_loader import load_env
-load_env()
+# ── Env ────────────────────────────────────────────────────────────────
+TOKEN = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
+API   = f"https://api.telegram.org/bot{TOKEN}"
+CHAT_CTRL = (os.getenv("TG_CHAT_CONTROL") or os.getenv("TELEGRAM_CHAT_ID") or "").strip()
 
-from control.control_center import control  # nutzt deine Queue
+# Allowlist: TG_ALLOWLIST oder TG_ALLOW_USER_IDS oder TG_ADMIN
+def _parse_ids(s: str | None) -> Set[int]:
+    if not s: return set()
+    out = set()
+    for part in s.replace(",", " ").split():
+        try: out.add(int(part))
+        except: pass
+    return out
 
-API = "https://api.telegram.org"
+ALLOWED: Set[int] = (
+    _parse_ids(os.getenv("TG_ALLOWLIST")) or
+    _parse_ids(os.getenv("TG_ALLOW_USER_IDS")) or
+    _parse_ids(os.getenv("TG_ADMIN"))
+)
+if not ALLOWED and CHAT_CTRL.isdigit():
+    ALLOWED = {int(CHAT_CTRL)}
 
-def env(name: str, default: str = "") -> str:
-    v = os.getenv(name, default)
-    return v.strip() if isinstance(v, str) else default
-
-TOKEN = env("TELEGRAM_BOT_TOKEN")
-CHAT_CONTROL = env("TG_CHAT_CONTROL")
-ALLOW = {s.strip() for s in env("TG_ALLOWLIST", "").split(",") if s.strip()}
-
-if not TOKEN or not CHAT_CONTROL:
-    print("❌ TELEGRAM_BOT_TOKEN oder TG_CHAT_CONTROL fehlt (.env).")
-    sys.exit(1)
-
-def tg_get_updates(offset: int | None, timeout: int = 30) -> Dict[str, Any]:
-    params = {"timeout": timeout, "limit": 20}
-    if offset is not None: params["offset"] = offset
-    r = requests.get(f"{API}/bot{TOKEN}/getUpdates", params=params, timeout=(10, timeout+5))
-    return r.json()
-
-def tg_send(chat_id: str, text: str) -> None:
-    payload = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True}
+def _ok_token() -> bool:
     try:
-        requests.post(f"{API}/bot{TOKEN}/sendMessage", json=payload, timeout=(10,10))
+        r = requests.get(f"{API}/getMe", timeout=15)
+        return r.status_code == 200 and r.json().get("ok") is True
     except Exception:
-        pass
+        return False
 
-def auth_ok(msg: Dict[str, Any]) -> bool:
-    # Nur vom konfigurierten Steuer-Chat und erlaubten Usern
-    chat = str(msg.get("chat", {}).get("id", ""))
-    user = str(msg.get("from", {}).get("id", ""))
-    if chat != CHAT_CONTROL: return False
-    if ALLOW and user not in ALLOW: return False
-    return True
+def _send(chat_id: str | int, text: str):
+    try:
+        payload = {"chat_id": str(chat_id), "text": text, "disable_web_page_preview": True}
+        r = requests.post(f"{API}/sendMessage", json=payload, timeout=15)
+        return r.status_code == 200, (r.json() if r.content else {})
+    except Exception as e:
+        return False, {"error": str(e)}
 
-def parse_cmd(text: str) -> Tuple[str, Dict[str, Any]]:
-    t = (text or "").strip()
-    if not t.startswith("/"): return "", {}
-    parts = t.split()
-    cmd = parts[0].lower()
-    args: Dict[str, Any] = {}
-    if cmd in ("/run_once", "/status", "/loop_on", "/loop_off", "/safe_on", "/safe_off"):
-        return cmd, args
-    # einfache Orderkommandos: /buy AAPL 5  → PLACE-Event über Control center (optional)
-    if cmd in ("/buy", "/sell") and len(parts) >= 3:
-        sym = parts[1].upper()
-        qty = float(parts[2])
-        side = "BUY" if cmd == "/buy" else "SELL"
-        return "/place", {"side": side, "sym": sym, "qty": qty}
-    return "", {}
+def _is_allowed(uid: int) -> bool:
+    return uid in ALLOWED if ALLOWED else True
 
-def dispatch(cmd: str, args: Dict[str, Any]) -> str:
-    # Map Telegram → Control-Center Events
-    if cmd == "/run_once":
-        control.submit("RUN_ONCE", src="telegram")
-        return "RUN_ONCE gesendet."
-    if cmd == "/loop_on":
-        control.submit("LOOP_ON", src="telegram")
-        return "LOOP_ON gesendet."
-    if cmd == "/loop_off":
-        control.submit("LOOP_OFF", src="telegram")
-        return "LOOP_OFF gesendet."
-    if cmd == "/status":
-        control.submit("STATUS", src="telegram")
-        return "STATUS angefordert."
-    if cmd == "/safe_on":
-        control.submit("SAFE_ON", src="telegram")
-        return "SAFE_ON gesetzt."
-    if cmd == "/safe_off":
-        control.submit("SAFE_OFF", src="telegram")
-        return "SAFE_OFF gesetzt."
-    if cmd == "/place":
-        # optionales einfaches Place-Demo-Event
-        control.submit("PLACE", {"sym": args["sym"], "qty": args["qty"], "side": args["side"]}, src="telegram")
-        return f"PLACE {args['side']} {args['sym']} x {args['qty']} gesendet."
-    return "Unbekanntes Kommando."
+# ── Steuer-Callbacks in dein Control-Center ────────────────────────────
+from control.control_center import control
 
-def main():
-    tg_send(CHAT_CONTROL, "🤖 robust_lab: Steuerbot online. Befehle: /run_once /loop_on /loop_off /status /safe_on /safe_off [/buy SYM QTY | /sell SYM QTY]")
-    offset = None
-    while True:
+CMDS = {
+    "/run_once":  "RUN_ONCE",
+    "/loop_on":   "LOOP_ON",
+    "/loop_off":  "LOOP_OFF",
+    "/safe_on":   "SAFE_ON",
+    "/safe_off":  "SAFE_OFF",
+    "/status":    "STATUS",
+}
+
+def _handle_text(msg: dict):
+    chat = msg.get("chat", {})
+    uid  = int(str(chat.get("id", "0")).replace("-", "")) if chat.get("type")=="private" else int(str(msg.get("from", {}).get("id", "0")))
+    txt  = (msg.get("text") or "").strip()
+    if txt in CMDS:
+        if not _is_allowed(uid):
+            _send(CHAT_CTRL or uid, f"⛔ Nicht erlaubt: {uid}")
+            return
+        control.submit(CMDS[txt], src="telegram")
+        _send(CHAT_CTRL or uid, f"✅ {txt} gesendet.")
+    elif txt in ("/help", "/start"):
+        _send(chat.get("id"), "Befehle: " + " ".join(CMDS.keys()))
+    else:
+        _send(chat.get("id"), "Unbekannt. /help")
+
+def _poll_loop(stop_flag):
+    if not _ok_token():
+        _send(CHAT_CTRL or "", "⚠️ Telegram-Token ungültig (getMe fehlgeschlagen).")
+        return
+    offset = 0
+    _send(CHAT_CTRL or "", "Bot-Control aktiv. Befehle: " + " ".join(CMDS.keys()))
+    while not stop_flag.is_set():
         try:
-            up = tg_get_updates(offset, timeout=30)
+            r = requests.post(f"{API}/getUpdates",
+                              json={"timeout": 25, "limit": 20, "offset": offset, "allowed_updates": ["message"]},
+                              timeout=(10, 30))
+            if r.status_code != 200: time.sleep(2); continue
+            body = r.json()
+            for upd in body.get("result", []):
+                offset = max(offset, int(upd["update_id"]) + 1)
+                msg = upd.get("message")
+                if not msg: continue
+                if "text" in msg: _handle_text(msg)
         except Exception:
-            time.sleep(2); continue
-        if not up or not up.get("ok"):
-            continue
-        for it in up.get("result", []):
-            offset = max(offset or 0, it["update_id"] + 1)
-            msg = it.get("message") or {}
-            if not msg:  # ignoriert CallbackQuery in dieser Minimalversion
-                continue
-            if not auth_ok(msg):
-                continue
-            text = msg.get("text", "")
-            cmd, args = parse_cmd(text)
-            if not cmd:
-                tg_send(CHAT_CONTROL, "Unbekannt. Nutze: /run_once /loop_on /loop_off /status /safe_on /safe_off [/buy SYM QTY | /sell SYM QTY]")
-                continue
-            resp = dispatch(cmd, args)
-            tg_send(CHAT_CONTROL, f"OK: {resp}")
-        # kleiner Herzschlag in Chat optional: auslassen für Ruhe
+            time.sleep(2)
 
-if __name__ == "__main__":
-    main()
+_STOP = threading.Event()
+_THR  = None
+
+def start():
+    global _THR, _STOP
+    if _THR and _THR.is_alive(): return
+    _STOP = threading.Event()
+    _THR = threading.Thread(target=_poll_loop, args=(_STOP,), name="tg-cmd-bot", daemon=True)
+    _THR.start()
+
+def stop():
+    if _THR and _THR.is_alive():
+        _STOP.set()

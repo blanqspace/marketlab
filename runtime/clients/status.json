@@ -4,16 +4,16 @@
     "module": "internal",
     "connected": false,
     "first_seen": "2025-09-17T19:29:36.212228+00:00",
-    "last_update": "2025-10-03T14:26:50.797189+00:00",
+    "last_update": "2025-10-04T00:27:07.588508+00:00",
     "last_heartbeat": null
   },
   "102": {
-    "task": "list",
+    "task": "place_MKT",
     "module": "order_executor",
-    "connected": true,
+    "connected": false,
     "first_seen": "2025-09-17T19:31:25.091987+00:00",
-    "last_update": "2025-10-03T14:27:31.507517+00:00",
-    "last_heartbeat": "2025-10-03T14:27:31.507528+00:00"
+    "last_update": "2025-10-04T00:25:26.948148+00:00",
+    "last_heartbeat": "2025-10-04T00:25:24.520935+00:00"
   },
   "101": {
     "task": "hist_SPY",
@@ -44,8 +44,8 @@
     "module": "data_manager",
     "connected": false,
     "first_seen": "2025-09-28T10:39:15.288252+00:00",
-    "last_update": "2025-10-03T14:25:40.781773+00:00",
-    "last_heartbeat": "2025-10-03T14:25:40.374955+00:00"
+    "last_update": "2025-10-04T01:14:07.050356+00:00",
+    "last_heartbeat": "2025-10-04T01:14:06.610280+00:00"
   },
   "150": {
     "task": "price",

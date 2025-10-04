@@ -1,7 +1,8 @@
 {
-  "active": true,
-  "chat_id": -4901396200,
-  "message_id": 558,
+  "active": false,
   "placed": 0,
-  "started_at": 1759501545.4248018
+  "ended_at": 1759540552.4321194,
+  "chat_id": -4901396200,
+  "message_id": 1691,
+  "cleaned": true
 }

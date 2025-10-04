@@ -1,6 +1,6 @@
 {
-  "cycle_id": "20251003_103907",
-  "ts_utc": "2025-10-03T10:39:26.515281+00:00",
+  "cycle_id": "20251003_210958",
+  "ts_utc": "2025-10-03T21:10:39.863177+00:00",
   "config": {
     "data": {
       "duration": "5 D",
@@ -10,15 +10,16 @@
     },
     "strategy": {
       "name": "sma_cross",
-      "fast": 10,
-      "slow": 20
+      "fast": 5,
+      "slow": 8
     },
     "exec": {
       "mode": "ask",
       "asset": "stock",
       "order_type": "MKT",
       "qty": 5,
-      "tif": "DAY"
+      "tif": "DAY",
+      "safe_dev": 0.005
     }
   },
   "signals": [
@@ -26,10 +27,10 @@
       "symbol": "AAPL",
       "signal": {
         "action": "SELL",
-        "t": "2025-10-02T15:35:00-04:00",
+        "t": "2025-10-03T15:05:00-04:00",
         "kind": "sma_cross",
-        "fast": 10,
-        "slow": 20
+        "fast": 5,
+        "slow": 8
       },
       "path": "data_clean\\stock_AAPL_5mins.csv"
     },
@@ -37,21 +38,21 @@
       "symbol": "MSFT",
       "signal": {
         "action": "SELL",
-        "t": "2025-10-02T15:25:00-04:00",
+        "t": "2025-10-03T15:40:00-04:00",
         "kind": "sma_cross",
-        "fast": 10,
-        "slow": 20
+        "fast": 5,
+        "slow": 8
       },
       "path": "data_clean\\stock_MSFT_5mins.csv"
     },
     {
       "symbol": "SPY",
       "signal": {
-        "action": "SELL",
-        "t": "2025-10-02T15:35:00-04:00",
+        "action": "BUY",
+        "t": "2025-10-03T15:40:00-04:00",
         "kind": "sma_cross",
-        "fast": 10,
-        "slow": 20
+        "fast": 5,
+        "slow": 8
       },
       "path": "data_clean\\stock_SPY_5mins.csv"
     }

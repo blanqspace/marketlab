@@ -45,6 +45,11 @@ class ControlCenter:
 
     def stop(self):
         self.running = False
+        try:
+            if self.worker and self.worker.is_alive():
+                self.worker.join(timeout=2.0)
+        except Exception:
+            pass
 
     def _loop(self):
         # <<< Asyncio-Loop im Thread bereitstellen >>>
@@ -116,7 +121,9 @@ class ControlCenter:
             import yaml
             with open("config/bot.yaml", "r", encoding="utf-8") as f:
                 cfg = yaml.safe_load(f) or {}
-            return int(cfg.get("interval_sec", 120))
+            itv = int(cfg.get("interval_sec", 120))
+            askw = int((cfg.get("telegram", {}) or {}).get("ask_window_sec", 120))
+            return max(itv, askw + 30)
         except Exception:
             return 120
 
@@ -144,9 +151,14 @@ class ControlCenter:
 
     def status(self) -> Dict[str, Any]:
         hb = _read_json(HB_FILE, {})
-        return {"safe": self._safe_on(), "loop_on": self.loop_on,
-                "last_hb": hb.get("ts"), "queue_size": self.q.qsize(),
-                "interval_sec": self.loop_interval}
+        return {
+            "safe": self._safe_on(),
+            "loop_on": self.loop_on,
+            "last_hb": hb.get("ts"),
+            "queue_size": self.q.qsize(),
+            "interval_sec": self.loop_interval,
+            "next_loop_eta_s": max(0, int(self._next_loop_ts - time.time())) if self.loop_on else None,
+        }
 
     # ---------- Notifier ----------
     def _notify(self, msg: str, level: str = "info"):

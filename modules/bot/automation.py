@@ -1,12 +1,9 @@
 # modules/bot/automation.py
 from __future__ import annotations
-from modules.bot.ask_flow import run_ask_flow
 import json, time, sys
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
-from modules.trade.common import contract_for
-
 
 # Projekt-Root für Imports sicherstellen
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,11 +16,12 @@ from modules.data.ingest import ingest_one
 from modules.trade.ops import place_orders
 from modules.trade.common import contract_for  # ggf. später genutzt
 
-# Neuer Telegram-Router
+# ASK-Flow
+from modules.bot.ask_flow import run_ask_flow, ask_flow_status, cancel_ask_flow
+
+# Telegram-Router
 from shared.system.telegram_notifier import (
     to_control, to_logs, to_orders, to_alerts,
-    # send_menu_control,  # bewusst NICHT automatisch gesendet
-    # send_order_decision
 )
 
 log = get_logger("bot")
@@ -68,7 +66,6 @@ def _read_csv_closes(csv_path: Path) -> Tuple[List[str], List[float]]:
     return out_ts, out_c
 
 def _notify_summary(lines: List[str]):
-    """Info-Sammelmeldung → LOGS-Channel."""
     if not lines:
         return
     to_logs("ℹ️ INFO:\n" + "\n".join(lines))
@@ -147,6 +144,15 @@ def _load_state() -> Dict[str, Any]:
     p = Path("runtime/bot_state.json")
     if not p.exists():
         return {}
+
+def _safe_on() -> bool:
+    p = Path("runtime/safe_mode.json")
+    if not p.exists():
+        return False
+    try:
+        return bool(json.loads(p.read_text(encoding="utf-8")).get("safe", False))
+    except Exception:
+        return False
     try:
         return json.loads(p.read_text(encoding="utf-8"))
     except Exception:
@@ -205,7 +211,7 @@ def run_once(cfg_path: str = "config/bot.yaml") -> None:
     mode = (exec_cfg.get("mode") or "ASK").upper()  # ASK | AUTO | OFF
     qty = float(exec_cfg.get("qty", 1))
     tif = exec_cfg.get("tif", "DAY")
-    order_type = exec_cfg.get("order_type", "MKT").upper()
+    order_type = (exec_cfg.get("order_type", "MKT") or "MKT").upper()
 
     placed = 0
     if mode == "AUTO":
@@ -238,13 +244,32 @@ def run_once(cfg_path: str = "config/bot.yaml") -> None:
 
     if mode == "ASK":
         try:
-            print("[ASK_DEBUG] calling run_ask_flow…", {"qty":qty, "tif":tif, "order_type":order_type})
-            placed = run_ask_flow(signals, exec_cfg, mode=ask_mode, window_sec=ask_window)
+            print("[ASK_DEBUG] calling run_ask_flow…", {"qty": qty, "tif": tif, "order_type": order_type})
+            st = ask_flow_status()
+            started_at = float(st.get("started_at", 0) or 0)
+            still_active = bool(st.get("active"))
+            age = time.time() - started_at if started_at else 0.0
+
+            # Kollisionsschutz im Loop:
+            if still_active and age <= ask_window + 5:
+                to_control("ASK noch aktiv → Skip in dieser Iteration.")
+                # trotzdem Status-Infos zu den Signalen posten
+            elif still_active and age > ask_window + 5:
+                # Hängenden Flow aufräumen
+                to_control("ASK hängt → sende Cancel und starte neu.")
+                try:
+                    cancel_ask_flow()
+                except Exception:
+                    pass
+                time.sleep(1.0)
+                placed = run_ask_flow(signals, exec_cfg, mode=ask_mode, window_sec=ask_window)
+            else:
+                placed = run_ask_flow(signals, exec_cfg, mode=ask_mode, window_sec=ask_window)
         except Exception as e:
             print(f"❌ ASK-Flow Fehler: {e}")
             placed = 0
 
-        # Konsole + Orders-Kanal informieren
+        # Infozeilen (immer)
         for s in signals:
             sig = s.get("signal")
             if not sig:
@@ -278,7 +303,23 @@ def run_once(cfg_path: str = "config/bot.yaml") -> None:
 def start_loop(cfg_path: str = "config/bot.yaml", interval_sec: int | None = None) -> None:
     cfg = _load_yaml(Path(cfg_path))
     itv = int(interval_sec or cfg.get("interval_sec", 120))
-    info = f"⏱  Bot-Loop gestartet (alle {itv}s). Abbruch mit Ctrl+C."
+
+    # Intervall an ASK-Fenster anpassen: itv >= ask_window + 30
+    try:
+        ask_window = int(cfg.get("telegram", {}).get("ask_window_sec", 120))
+        itv = max(itv, ask_window + 30)
+    except Exception:
+        pass
+
+        try:
+        ask_window = int(cfg.get("telegram", {}).get("ask_window_sec", 120))
+        if itv < ask_window + 30:
+            to_logs(f"Intervall {itv}s < ask_window+30 ({ask_window+30}s) → setze auf {ask_window+30}s.")
+            itv = ask_window + 30
+    except Exception:
+        pass
+
+info = f"⏱  Bot-Loop gestartet (alle {itv}s). Abbruch mit Ctrl+C."
     print(info); to_control(info)
     try:
         while True:
@@ -300,7 +341,6 @@ def print_status():
 # --- ASK-Flow CLI-Helpers ---
 def ask_flow_cancel_cli():
     try:
-        from modules.bot.ask_flow import cancel_ask_flow
         cancel_ask_flow()
         print("✓ ASK-Flow: Abbruchsignal gesendet.")
         to_control("ASK-Flow: Abbruchsignal gesendet.")
@@ -310,7 +350,6 @@ def ask_flow_cancel_cli():
 
 def ask_flow_status_cli():
     try:
-        from modules.bot.ask_flow import ask_flow_status
         st = ask_flow_status()
         txt = json.dumps(st, indent=2, ensure_ascii=False)
         print(txt); to_control(f"ASK-Flow Status:\n{txt}")

@@ -8,8 +8,8 @@ data:
 
 strategy:
   name: sma_cross
-  fast: 10
-  slow: 20
+  fast: 5
+  slow: 8
 
 exec:
   mode: ask             # ask | auto | off
@@ -17,10 +17,13 @@ exec:
   order_type: MKT       # MKT | LMT | STP | STOP_LIMIT
   qty: 5
   tif: DAY              # Time in Force: DAY | GTC etc.
+  safe_dev: 0.005   # 0.5% vom letzten Preis als Schutz
 
-interval_sec: 120        # Bot-Loop Intervall (Sekunden)
+interval_sec: 150        # Bot-Loop Intervall (Sekunden)
 
 telegram:
   enabled: true
-  ask_mode: async        # blocking = wartet im Code | async = Buttons im Hintergrund
-  ask_window_sec: 120    # Zeitfenster für Inline-Interaktion
+  ask_mode: blocking        # blocking = wartet im Code | async = Buttons im Hintergrund
+  ask_window_sec: 100    # Zeitfenster für Inline-Interaktion
+
+  
