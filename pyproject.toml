@@ -14,7 +14,8 @@ dependencies = [
   "pydantic>=2.7",
   "ib-insync>=0.9",
   "pandas>=2.2",
-  "pyarrow>=17.0"
+  "pyarrow>=17.0",
+  "requests>=2.32"
 ]
 
 [project.optional-dependencies]
@@ -37,4 +38,5 @@ line-length = 100
 python_version = "3.11"
 warn_unused_ignores = true
 strict = true
+
 

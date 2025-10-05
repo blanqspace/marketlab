@@ -18,6 +18,7 @@ class TelegramSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
     enabled: bool = Field(False, alias="TELEGRAM_ENABLED")
     bot_token: SecretStr | None = Field(None, alias="TELEGRAM_BOT_TOKEN")
+    chat_control: str | None = Field(None, alias="TG_CHAT_CONTROL")
 
 class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

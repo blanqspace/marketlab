@@ -3,6 +3,7 @@ pydantic>=2.7
 ib-insync>=0.9
 pandas>=2.2
 pyarrow>=17.0
+requests>=2.32
 
 [dev]
 pytest>=8
