@@ -1,0 +1,6 @@
+{
+  "symbol": "AAPL",
+  "exists": true,
+  "path": "data_clean\\stock_AAPL_5mins.csv",
+  "rows": 937
+}

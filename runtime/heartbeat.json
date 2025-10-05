@@ -1,5 +1,6 @@
 {
-  "ts": 1759615531.9321265,
-  "safe": false,
-  "loop_on": false
+  "ts": 1759672218,
+  "loop_enabled": false,
+  "safe_mode": false,
+  "last_run_id": "20251005_154944"
 }
