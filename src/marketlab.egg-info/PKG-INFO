@@ -8,7 +8,8 @@ Description-Content-Type: text/markdown
 Requires-Dist: typer>=0.12
 Requires-Dist: pydantic>=2.7
 Requires-Dist: ib-insync>=0.9
-Requires-Dist: pydantic-settings>=2.7
+Requires-Dist: pandas>=2.2
+Requires-Dist: pyarrow>=17.0
 Provides-Extra: dev
 Requires-Dist: pytest>=8; extra == "dev"
 Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
