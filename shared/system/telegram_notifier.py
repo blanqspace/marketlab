@@ -30,8 +30,9 @@ class TelegramNotifier:
 
         # Mock-Schalter und Mock-Ordner
 
-        self.mock = str(os.getenv("TELEGRAM_MOCK", "0")) == "1"
-        self._mock_dir = Path("runtime/telegram_mock")
+        self.mock = str(os.getenv("TELEGRAM_MOCK","0")) == "1"
+        from pathlib import Path
+        self._mock_dir = Path("runtime/telegram_mock"); self._mock_dir.mkdir(parents=True, exist_ok=True)
         self._mock_dir.mkdir(parents=True, exist_ok=True)
 
     def _get(self, method: str, params: Dict[str, Any]=None) -> Dict[str, Any]:
@@ -90,39 +91,28 @@ class TelegramNotifier:
             res["degraded"] = True
         st = _read_state(); st["telegram_enabled_effective"] = (self.enabled and not res["degraded"]); _write_state(st); _write_startup(res); return res
 
-    def _mock_write(self, name: str, payload: dict) -> dict:
+    def _mock_write(self, name, payload):
         import json, time
         p = self._mock_dir / f"{name}.json"
-        data = {"ok": True, "result": payload, "ts": int(time.time())}
-        p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        return data
+        p.write_text(json.dumps({"ok":True,"result":payload,"ts":int(time.time())}, indent=2), encoding="utf-8")
+        return {"ok":True,"result":payload}
 
-    def _get(self, method: str, params: dict | None = None) -> dict:
-        if not self.enabled:
-            return {}
+    def _get(self, method, params=None):
+        if not self.enabled: return {}
         if self.mock:
-            # synthetische Antwort für getMe
-            if method == "getMe":
-                return {"ok": True, "result": {"id": 123456, "is_bot": True, "username": "mock_bot"}}
-            return {"ok": True, "result": {}}
-        import requests
-        url = f"{self.base}/{method}"
-        r = requests.get(url, params=params or {}, timeout=self.timeout)
-        r.raise_for_status()
-        return r.json()
+            return {"ok": True, "result": {"id":123456,"is_bot":True,"username":"mock_bot"} if method=="getMe" else {}}
+        # live request…
 
-    def _post(self, method: str, data: dict) -> dict:
-        if not self.enabled:
-            return {}
+    def _post(self, method, data):
+        if not self.enabled: return {}
         if self.mock:
-            # synthetische Antworten in Dateien ablegen
-            if method == "sendMessage":
-                res = {"message_id": 1, "chat": {"id": data.get("chat_id")}, "text": data.get("text")}
-                return self._mock_write("sendMessage", res)
-            if method == "editMessageReplyMarkup":
-                res = {"message_id": data.get("message_id"), "chat": {"id": data.get("chat_id")}, "reply_markup": data.get("reply_markup")}
-                return self._mock_write("editMessageReplyMarkup", res)
-            return self._mock_write(method, {"echo": data})
+            if method=="sendMessage":
+                return self._mock_write("sendMessage", {"message_id":1,"chat":{"id":data.get("chat_id")},"text":data.get("text")})
+            if method=="editMessageReplyMarkup":
+                return self._mock_write("editMessageReplyMarkup", {"message_id":data.get("message_id"),"chat":{"id":data.get("chat_id")},"reply_markup":data.get("reply_markup")})
+            return self._mock_write(method, {"echo":data})
+        # live request…
+
         import requests
         url = f"{self.base}/{method}"
         r = requests.post(url, json=data, timeout=self.timeout)
