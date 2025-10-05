@@ -1,0 +1,6 @@
+{
+  "symbol": "SPY",
+  "exists": true,
+  "path": "data_clean\\stock_SPY_5mins.csv",
+  "rows": 937
+}

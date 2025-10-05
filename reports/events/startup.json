@@ -1,0 +1,8 @@
+{
+  "env_valid": true,
+  "getMe": true,
+  "control_ping": true,
+  "inline_sent": true,
+  "inline_dismiss": true,
+  "degraded": false
+}

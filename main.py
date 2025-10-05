@@ -1,297 +1,176 @@
-# main.py
-from __future__ import annotations
-import sys
-import threading
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import os
+import time
+import argparse
 from pathlib import Path
-from datetime import datetime
-from datetime import datetime, timezone
 
-# ── sys.path / Env ─────────────────────────────────────────
-ROOT = Path(__file__).resolve().parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+from shared.core.config_loader import load_env
+from shared.system.telegram_notifier import TelegramNotifier
+from shared.utils.logger import get_logger
+from modules.bot.automation import Automation
 
-from shared.core.config_loader import load_env  # type: ignore
-load_env()
+logger = get_logger("main")
 
-# ── Control-Center ────────────────────────────────────────
-from control.control_center import control  # type: ignore
-control.start()
+# -------- CLI --------
+def parse_args():
+    p = argparse.ArgumentParser(description="robust_lab controller")
+    p.add_argument("--run-once", action="store_true")
+    p.add_argument("--loop-on", type=int, metavar="SECONDS")
+    p.add_argument("--loop-off", action="store_true")
+    p.add_argument("--status", action="store_true")
+    p.add_argument("--safe-on", action="store_true")
+    p.add_argument("--safe-off", action="store_true")
+    return p.parse_args()
 
-# ── Telegram-Bots (defensiv importieren) ──────────────────
-try:
-    from telegram.bot_inline import start_inline_bot, stop_inline_bot  # type: ignore
-except Exception:
-    def start_inline_bot():  # fallback no-op
-        print("Inline-Bot-Modul fehlt.")
-    def stop_inline_bot():
+# -------- Telegram init --------
+def _build_routes(env: dict) -> dict:
+    return {
+        "CONTROL": env.get("TG_CHAT_CONTROL"),
+        "LOGS": env.get("TG_CHAT_LOGS") or env.get("TG_CHAT_CONTROL"),
+        "ORDERS": env.get("TG_CHAT_ORDERS") or env.get("TG_CHAT_CONTROL"),
+        "ALERTS": env.get("TG_CHAT_ALERTS") or env.get("TG_CHAT_CONTROL"),
+        "DEFAULT": env.get("TG_CHAT_CONTROL"),
+    }
+
+def _init_telegram(env: dict) -> TelegramNotifier:
+    enabled = str(env.get("TELEGRAM_ENABLED", "0")) == "1"
+    token = env.get("TELEGRAM_BOT_TOKEN", "") or ""
+    routes = _build_routes(env)
+    tn = TelegramNotifier(token=token, enabled=enabled, routes=routes)
+    if enabled and str(env.get("TELEGRAM_AUTOSTART", "0")) == "1":
+        try:
+            tn.startup_probe()
+        except Exception as e:
+            logger.error(f"telegram startup_probe failed: {e}")
+    return tn
+
+# -------- ControlCenter-Shim (kompatibel zu vorhandenen Menü-Erwartungen) --------
+class ControlCenterShim:
+    def __init__(self, automation: Automation):
+        self.automation = automation
+        self.loop_enabled = False
+        self.safe_mode = False
+        self._stopfile = Path("runtime/locks/loop_off")
+        self._stopfile.parent.mkdir(parents=True, exist_ok=True)
+
+    # optionale API, wird nur genutzt wenn vorhanden
+    def start_heartbeat(self):  # no-op shim
         pass
 
-_CMD_BOT_THREAD = None  # type: ignore
+    def _loop_should_continue(self):
+        return self.loop_enabled and not self._stopfile.exists()
 
-def _start_cmd_bot_in_thread() -> None:
-    """Startet telegram.bot_control.start() im Hintergrund."""
-    global _CMD_BOT_THREAD
-    if _CMD_BOT_THREAD and _CMD_BOT_THREAD.is_alive():
-        return
-
-    def _runner():
+    def loop_on(self, interval_sec: int):
+        self.loop_enabled = True
         try:
-            from telegram.bot_control import start as _start  # type: ignore
-            _start()
-        except Exception as e:
-            print(f"bot_control Fehler: {e}")
-
-    t = threading.Thread(target=_runner, name="tg-cmd-bot", daemon=True)
-    t.start()
-    _CMD_BOT_THREAD = t
-
-# ── Console UTF-8 ─────────────────────────────────────────
-try:
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-except Exception:
-    pass
-
-SHOW_HINTS = True
-
-# ───────────── Helpers ─────────────
-def _status_line() -> str:
-    try:
-        hb = control.status()
-        safe = "ON" if hb.get("safe") else "OFF"
-        lp = "ON" if hb.get("loop_on") else "OFF"
-        itv = hb.get("interval_sec", 0)
-        qsz = hb.get("queue_size", 0)
-        last = hb.get("last_hb")
-        last_iso = datetime.fromtimestamp(last, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if last else "-"
-        return f"[SAFE:{safe}] [LOOP:{lp} {itv}s] [Queue:{qsz}] [Last:{last_iso}]"
-    except Exception:
-        return ""
-
-def _header(title: str) -> None:
-    st = _status_line()
-    print("\n" + "-" * 70)
-    print(title)
-    if st:
-        print(st)
-    print("-" * 70)
-    if SHOW_HINTS:
-        print("Hinweis: 0=Zurück  M=Mehr  Q=Beenden")
-
-def _ask(prompt: str, default: str | None = None) -> str:
-    s = input(f"{prompt}{f' [{default}]' if default is not None else ''}: ").strip()
-    if s.lower() in ("q", "quit", "x", "exit"):
-        sys.exit(0)
-    if s.lower() in ("m", "mehr"):
-        raise KeyboardInterrupt
-    if s == "" and default is not None:
-        return default
-    return s
-
-def _ask_int(prompt: str, valid: list[int], default: int | None = None) -> int:
-    while True:
-        try:
-            v = _ask(prompt, str(default) if default is not None else None)
-            if v == "" and default is not None:
-                return default
-            n = int(v)
-            if n not in valid:
-                print(f"Bitte {valid} wählen.")
-                continue
-            return n
-        except KeyboardInterrupt:
-            raise
-        except SystemExit:
-            raise
+            if self._stopfile.exists():
+                self._stopfile.unlink()
         except Exception:
-            print("Bitte eine Zahl eingeben.")
+            pass
+        # nicht-blockierend hier; Block übernimmt main()
+        self._interval = max(1, int(interval_sec))
 
-def _pause(msg: str = "Enter=weiter ...") -> None:
-    _ = input(msg)
-
-# ───────────── Kern-Aktionen ─────────────
-def do_run_once() -> None:
-    control.submit("RUN_ONCE", src="terminal")
-    print("→ RUN_ONCE gesendet.")
-    _pause()
-
-def do_loop_toggle() -> None:
-    st = control.status()
-    if st.get("loop_on"):
-        control.submit("LOOP_OFF", src="terminal")
-        print("→ LOOP_OFF gesendet.")
-    else:
-        control.submit("LOOP_ON", src="terminal")
-        print("→ LOOP_ON gesendet.")
-    _pause()
-
-def do_safe_toggle() -> None:
-    st = control.status()
-    if st.get("safe"):
-        control.submit("SAFE_OFF", src="terminal")
-        print("→ SAFE_OFF gesendet.")
-    else:
-        control.submit("SAFE_ON", src="terminal")
-        print("→ SAFE_ON gesendet.")
-    _pause()
-
-def do_status() -> None:
-    control.submit("STATUS", src="terminal")
-    print("→ STATUS gesendet.")
-    _pause()
-
-# ───────────── Orders ─────────────
-def orders_menu() -> None:
-    _header("Orders")
-    print("1) Offene Orders anzeigen")
-    print("2) Alle Orders stornieren (Global Cancel)")
-    print("0) Zurück")
-    ch = _ask_int("Auswahl", valid=[0, 1, 2])
-    if ch == 0:
-        return
-    if ch == 1:
+    def loop_off(self):
+        self.loop_enabled = False
         try:
-            from modules.trade.ops import list_orders  # type: ignore
-            print("Offene Orders:")
-            # list_orders druckt selbst, liefert nichts zurück
-            list_orders(show_all=True, show_exec=False, show_pos=False)
-        except Exception as e:
-            print(f"list_orders Fehler: {e}")
-        _pause()
-    elif ch == 2:
-        control.submit("CANCEL_ALL", src="terminal")
-        print("→ CANCEL_ALL gesendet.")
-        _pause()
-# ───────────── Telegram ─────────────
-def telegram_menu() -> None:
-    _header("Telegram")
-    print("1) Inline-Bot (Buttons) starten")
-    print("2) Inline-Bot stoppen")
-    print("3) Control-Bot (/run_once, /loop_on, …) starten")
-    print("0) Zurück")
-    ch = _ask_int("Auswahl", valid=[0, 1, 2, 3])
-    if ch == 0:
-        return
-    if ch == 1:
-        start_inline_bot()
-        print("Inline-Bot gestartet.")
-        _pause()
-    elif ch == 2:
-        stop_inline_bot()
-        print("Inline-Bot gestoppt.")
-        _pause()
-    elif ch == 3:
-        _start_cmd_bot_in_thread()
-        print("Control-Bot gestartet.")
-        _pause()
+            self._stopfile.touch(exist_ok=True)
+        except Exception:
+            pass
 
-# ───────────── Mehr (Legacy) ─────────────
-def more_menu() -> None:
+# -------- Menü --------
+def run_menu(cc: ControlCenterShim):
     while True:
-        _header("Mehr (Backtest, Daten, Diagnose)")
-        print("1) Trade Hub (altes Menü)")
-        print("2) Tools (Daten, Backtests, Diagnose)")
-        print("3) Control Center (alt)")
-        print("0) Zurück")
-        ch = _ask_int("Auswahl", valid=[0, 1, 2, 3])
-        if ch == 0:
+        print(
+            "\n----------------------------------------------------------------------\n"
+            "Hauptmenü\n"
+            f"[SAFE:{'ON' if cc.safe_mode else 'OFF'}] "
+            f"[LOOP:{'ON' if cc.loop_enabled else 'OFF'}]\n"
+            "----------------------------------------------------------------------\n"
+            "0) Beenden\n"
+            "1) Run once\n"
+            "2) Loop  ON/OFF\n"
+            "3) SAFE  ON/OFF\n"
+            "4) Status\n"
+            "5) Orders (Platzhalter)\n"
+        )
+        choice = input("Auswahl: ").strip().lower()
+        if choice == "0":
             return
-        if ch == 1:
-            _legacy_tradehub()
-        elif ch == 2:
-            _legacy_tools()
-        elif ch == 3:
-            _legacy_control_menu()
-
-def _legacy_tradehub() -> None:
-    try:
-        from modules.trade.menu import main_menu as trade_menu  # type: ignore
-    except Exception as e:
-        print(f"Trade-Menü Import-Fehler: {e}")
-        _pause()
-        return
-    try:
-        trade_menu()
-    except (KeyboardInterrupt, SystemExit):
-        return
-    except Exception as e:
-        print(f"Trade-Menü Fehler: {e}")
-        _pause()
-
-def _legacy_tools() -> None:
-    print("Tools belassen")
-    _pause()
-
-def _legacy_control_menu() -> None:
-    while True:
-        _header("Control Center (alt)")
-        print("1) RUN_ONCE")
-        print("2) LOOP_ON")
-        print("3) LOOP_OFF")
-        print("4) CANCEL_ALL")
-        print("5) SAFE_ON")
-        print("6) SAFE_OFF")
-        print("7) STATUS")
-        print("0) Zurück")
-        ch = _ask_int("Auswahl", valid=[0, 1, 2, 3, 4, 5, 6, 7])
-        if ch == 0:
-            return
-        cmd_map = {
-            1: "RUN_ONCE", 2: "LOOP_ON", 3: "LOOP_OFF",
-            4: "CANCEL_ALL", 5: "SAFE_ON", 6: "SAFE_OFF", 7: "STATUS"
-        }
-        cmd = cmd_map[ch]
-        control.submit(cmd, src="terminal")
-        print(f"→ gesendet: {cmd}")
-        _pause()
-
-# ───────────── Main ─────────────
-def main_menu() -> None:
-    global SHOW_HINTS
-    while True:
-        try:
-            print("\n" + "-" * 70)
-            print("Hauptmenü")
-            st = _status_line()
-            if st:
-                print(st)
-            print("-" * 70)
-            if SHOW_HINTS:
-                print("Hinweis: 0=Beenden  M=Mehr  H=Hinweise umschalten")
-            print("1) Run once")
-            print("2) Loop  ON/OFF")
-            print("3) SAFE  ON/OFF")
-            print("4) Status")
-            print("5) Orders")
-            print("9) Telegram")
-            print("M) Mehr")
-            print("0) Beenden")
-            raw = input("Auswahl: ").strip()
-            lo = raw.lower()
-            if lo in ("q", "quit", "x", "exit", "0"):
-                break
-            if lo in ("h",):
-                SHOW_HINTS = not SHOW_HINTS
-                continue
-            if lo in ("m", "mehr"):
-                more_menu()
-                continue
-            if raw == "1":
-                do_run_once()
-            elif raw == "2":
-                do_loop_toggle()
-            elif raw == "3":
-                do_safe_toggle()
-            elif raw == "4":
-                do_status()
-            elif raw == "5":
-                orders_menu()
-            elif raw == "9":
-                telegram_menu()
+        elif choice == "1":
+            cc.start_heartbeat()
+            cc.automation.safe_mode = cc.safe_mode
+            cc.automation.run_once()
+        elif choice == "2":
+            if cc.loop_enabled:
+                cc.loop_off()
+                print("Loop: OFF")
             else:
-                print("Bitte 0,1,2,3,4,5,9 oder M.")
-        except KeyboardInterrupt:
-            break
+                try:
+                    interval = int(input("Intervall in Sekunden: ").strip() or "15")
+                except ValueError:
+                    interval = 15
+                cc.start_heartbeat()
+                cc.loop_on(interval)
+                print(f"Loop gestartet @ {interval}s. STRG+C zum Stoppen.")
+                _block_until_loop_stops(cc)
+        elif choice == "3":
+            cc.safe_mode = not cc.safe_mode
+            print(f"SAFE: {'ON' if cc.safe_mode else 'OFF'}")
+        elif choice == "4":
+            print(f"Status → SAFE={cc.safe_mode} LOOP={cc.loop_enabled} LAST_RUN={cc.automation.last_run_id}")
+        elif choice == "5":
+            print("Orders: Platzhalter.")
+        else:
+            print("Ungültig.")
+
+# -------- Helpers --------
+def _block_until_loop_stops(cc: ControlCenterShim):
+    try:
+        # periodischer Loop mit Überlaufbehandlung
+        while cc._loop_should_continue():
+            t0 = time.time()
+            cc.automation.safe_mode = cc.safe_mode
+            try:
+                cc.automation.run_once()
+            except Exception as e:
+                logger.error(f"loop_run_error: {e}")
+            dt = time.time() - t0
+            sleep = max(0, getattr(cc, "_interval", 15) - dt)
+            time.sleep(sleep)
+    except KeyboardInterrupt:
+        cc.loop_off()
+
+# -------- main --------
+def main():
+    args = parse_args()
+    env = load_env()
+    _ = _init_telegram(env)
+
+    automation = Automation()
+    cc = ControlCenterShim(automation)
+
+    # Flags
+    if args.safe_on:
+        cc.safe_mode = True; print("SAFE=ON"); return
+    if args.safe_off:
+        cc.safe_mode = False; print("SAFE=OFF"); return
+    if args.status:
+        print(f"STATUS SAFE={cc.safe_mode} LOOP={cc.loop_enabled} LAST_RUN={automation.last_run_id}"); return
+    if args.loop_off:
+        cc.loop_off(); print("Loop: OFF"); return
+    if args.run_once:
+        cc.automation.safe_mode = cc.safe_mode
+        rid = cc.automation.run_once()
+        print(f"Run once done. RUN_ID={rid}"); return
+    if args.loop_on is not None:
+        cc.loop_on(max(1, int(args.loop_on)))
+        print(f"Loop ON @ {args.loop_on}s. STRG+C zum Stoppen.")
+        _block_until_loop_stops(cc); return
+
+    # Menü
+    run_menu(cc)
 
 if __name__ == "__main__":
-    main_menu()
+    main()
