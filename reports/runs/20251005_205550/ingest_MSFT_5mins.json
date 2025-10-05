@@ -1,0 +1,6 @@
+{
+  "symbol": "MSFT",
+  "exists": true,
+  "path": "data_clean\\stock_MSFT_5mins.csv",
+  "rows": 937
+}

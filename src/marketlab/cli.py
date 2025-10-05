@@ -1,4 +1,4 @@
-﻿from typing import Optional
+from typing import Optional
 import time
 import typer
 from marketlab.settings import settings
@@ -38,8 +38,9 @@ def backtest_cmd(
     timeframe: str = CommonTF,
     start: Optional[str] = typer.Option(None, help="ISO-Start"),
     end: Optional[str] = typer.Option(None, help="ISO-Ende"),
+    work_units: int = typer.Option(120, "--work-units", help="Simulierte Arbeitsschritte"),
 ) -> None:
-    _run_mode(backtest.run, "backtest", profile, symbols.split(","), timeframe, start, end)
+    _run_mode(backtest.run, "backtest", profile, symbols.split(","), timeframe, start, end, work_units)
 
 @app.command("replay")
 def replay_cmd(

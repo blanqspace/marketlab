@@ -1,8 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 import requests
 import time
 from threading import Thread, Event
-from typing import Iterable
 from marketlab.settings import settings
 from marketlab.core.state_manager import STATE, Command, RunState
 
@@ -17,6 +16,7 @@ class TelegramService:
         self.token: str | None = settings.telegram.bot_token.get_secret_value() if settings.telegram.bot_token else None
         self.chat_id: int | None = settings.telegram.chat_control
         self.allow: set[int] = _to_ints(settings.telegram.allowlist_csv)
+        self.brand: str = settings.app_brand
         self._stop = Event()
         self._thread: Thread | None = None
 
@@ -33,15 +33,15 @@ class TelegramService:
 
     # Notifications
     def notify_start(self, mode: str) -> None:
-        self.send_text(f"▶️ MarketLab started: <b>{mode}</b>")
+        self.send_text(f"▶️ {self.brand} started: <b>{mode}</b>")
 
     def notify_end(self, mode: str) -> None:
-        self.send_text(f"⏹ MarketLab finished: <b>{mode}</b>")
+        self.send_text(f"⏹ {self.brand} finished: <b>{mode}</b>")
 
     def notify_error(self, msg: str) -> None:
-        self.send_text(f"⚠️ MarketLab error: <b>{msg}</b>")
+        self.send_text(f"⚠️ {self.brand} error: <b>{msg}</b>")
 
-    # Command polling
+    # Poller
     def start_poller(self) -> None:
         if not (self.enabled and self.token):
             return
@@ -69,7 +69,11 @@ class TelegramService:
                         continue
                     user_id = msg.get("from", {}).get("id")
                     text = (msg.get("text") or "").strip()
-                    if not text or not user_id:
+                    chat_id = msg.get("chat", {}).get("id")
+                    if not text or not user_id or not chat_id:
+                        continue
+                    if self.chat_id and int(chat_id) != int(self.chat_id):
+                        # ignore other chats
                         continue
                     if self.allow and int(user_id) not in self.allow:
                         continue
@@ -79,7 +83,11 @@ class TelegramService:
 
     def _handle_text(self, text: str) -> None:
         t = text.lower()
-        if t.startswith("/status"):
+        if t.startswith("/help"):
+            self.send_text("Commands: /status, /pause, /resume, /stop, /ping")
+        elif t.startswith("/ping"):
+            self.send_text("pong")
+        elif t.startswith("/status"):
             self._do_status()
         elif t.startswith("/pause"):
             STATE.post(Command.PAUSE); self.send_text("⏸ paused")
@@ -88,7 +96,7 @@ class TelegramService:
         elif t.startswith("/stop"):
             STATE.post(Command.STOP); self.send_text("🛑 stopping")
         else:
-            self.send_text("Commands: /status, /pause, /resume, /stop")
+            self.send_text("Unknown. Use /help")
 
     def _do_status(self) -> None:
         self.send_text(f"ℹ️ status: mode={STATE.mode}, state={STATE.state.name}")
