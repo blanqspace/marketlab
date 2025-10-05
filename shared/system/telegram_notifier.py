@@ -28,6 +28,12 @@ class TelegramNotifier:
         self.timeout = timeout
         self.base = f"https://api.telegram.org/bot{self.token}"
 
+        # Mock-Schalter und Mock-Ordner
+
+        self.mock = str(os.getenv("TELEGRAM_MOCK", "0")) == "1"
+        self._mock_dir = Path("runtime/telegram_mock")
+        self._mock_dir.mkdir(parents=True, exist_ok=True)
+
     def _get(self, method: str, params: Dict[str, Any]=None) -> Dict[str, Any]:
         r = requests.get(f"{self.base}/{method}", params=params or {}, timeout=self.timeout) if self.enabled else None
         if not self.enabled: return {}
@@ -84,31 +90,71 @@ class TelegramNotifier:
             res["degraded"] = True
         st = _read_state(); st["telegram_enabled_effective"] = (self.enabled and not res["degraded"]); _write_state(st); _write_startup(res); return res
 
+    def _mock_write(self, name: str, payload: dict) -> dict:
+        import json, time
+        p = self._mock_dir / f"{name}.json"
+        data = {"ok": True, "result": payload, "ts": int(time.time())}
+        p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        return data
+
+    def _get(self, method: str, params: dict | None = None) -> dict:
+        if not self.enabled:
+            return {}
+        if self.mock:
+            # synthetische Antwort für getMe
+            if method == "getMe":
+                return {"ok": True, "result": {"id": 123456, "is_bot": True, "username": "mock_bot"}}
+            return {"ok": True, "result": {}}
+        import requests
+        url = f"{self.base}/{method}"
+        r = requests.get(url, params=params or {}, timeout=self.timeout)
+        r.raise_for_status()
+        return r.json()
+
+    def _post(self, method: str, data: dict) -> dict:
+        if not self.enabled:
+            return {}
+        if self.mock:
+            # synthetische Antworten in Dateien ablegen
+            if method == "sendMessage":
+                res = {"message_id": 1, "chat": {"id": data.get("chat_id")}, "text": data.get("text")}
+                return self._mock_write("sendMessage", res)
+            if method == "editMessageReplyMarkup":
+                res = {"message_id": data.get("message_id"), "chat": {"id": data.get("chat_id")}, "reply_markup": data.get("reply_markup")}
+                return self._mock_write("editMessageReplyMarkup", res)
+            return self._mock_write(method, {"echo": data})
+        import requests
+        url = f"{self.base}/{method}"
+        r = requests.post(url, json=data, timeout=self.timeout)
+        r.raise_for_status()
+        return r.json()
+
+
 # --- Legacy-Kompatibilität: alte Funktionsnamen ---
-def to_control(text: str):
-    """Legacy wrapper for CONTROL channel"""
+def _routes_from_env():
+    return {
+        "CONTROL": os.getenv("TG_CHAT_CONTROL"),
+        "LOGS": os.getenv("TG_CHAT_LOGS") or os.getenv("TG_CHAT_CONTROL"),
+        "ORDERS": os.getenv("TG_CHAT_ORDERS") or os.getenv("TG_CHAT_CONTROL"),
+        "ALERTS": os.getenv("TG_CHAT_ALERTS") or os.getenv("TG_CHAT_CONTROL"),
+    }
+
+def _send_text(channel_key: str, text: str):
+    r = _routes_from_env()
+    chat = r.get(channel_key) or r.get("CONTROL")
     try:
         tn = TelegramNotifier(
             token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
             enabled=str(os.getenv("TELEGRAM_ENABLED", "0")) == "1",
-            routes={
-                "CONTROL": os.getenv("TG_CHAT_CONTROL"),
-                "LOGS": os.getenv("TG_CHAT_LOGS"),
-                "ORDERS": os.getenv("TG_CHAT_ORDERS"),
-                "ALERTS": os.getenv("TG_CHAT_ALERTS"),
-            },
+            routes=r,
         )
-        ctrl = tn.routes.get("CONTROL")
-        if ctrl:
-            tn.send_text(ctrl, text)
+        if chat:
+            tn.send_text(int(chat), text)
     except Exception as e:
-        print(f"[telegram_notifier] to_control failed: {e}")
+        print(f"[telegram_notifier] send {channel_key} failed: {e}")
 
-def to_logs(text: str):
-    to_control(f"[LOG] {text}")
-
-def to_orders(text: str):
-    to_control(f"[ORD] {text}")
-
-def to_alerts(text: str):
-    to_control(f"[ALR] {text}")
+# --- Legacy-kompatible Aliase mit echtem Routing ---
+def to_control(text: str): _send_text("CONTROL", text)
+def to_logs(text: str):    _send_text("LOGS",    text)
+def to_orders(text: str):  _send_text("ORDERS",  text)
+def to_alerts(text: str):  _send_text("ALERTS",  text)
