@@ -9,6 +9,8 @@ src/marketlab.egg-info/SOURCES.txt
 src/marketlab.egg-info/dependency_links.txt
 src/marketlab.egg-info/requires.txt
 src/marketlab.egg-info/top_level.txt
+src/marketlab/core/__init__.py
+src/marketlab/core/state_manager.py
 src/marketlab/data/__init__.py
 src/marketlab/data/adapters.py
 src/marketlab/data/paths.py
@@ -19,4 +21,5 @@ src/marketlab/modes/replay.py
 src/marketlab/services/__init__.py
 src/marketlab/services/telegram_service.py
 src/marketlab/utils/logging.py
+src/marketlab/utils/signal_handlers.py
 tests/test_cli_smoke.py

@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import time
 from marketlab.data.adapters import CSVAdapter
 from marketlab.settings import RuntimeConfig
@@ -15,7 +15,7 @@ def _pump_commands() -> None:
     elif cmd == Command.STOP:
         STATE.set_state(RunState.EXIT)
 
-def run(profile: str, symbols: list[str], timeframe: str, start: str | None, end: str | None) -> None:
+def run(profile: str, symbols: list[str], timeframe: str, start: str | None, end: str | None, work_units: int = 300) -> None:
     cfg = RuntimeConfig(profile=profile, symbols=symbols, timeframe=timeframe)
     log.info({"event": "backtest.start", "cfg": cfg.model_dump()})
 
@@ -26,15 +26,15 @@ def run(profile: str, symbols: list[str], timeframe: str, start: str | None, end
         total += len(bars)
         log.info({"event": "backtest.loaded", "symbol": sym, "bars": len(bars)})
 
-    # simulate processing loop so PAUSE/RESUME/STOP can be tested
+    STATE.set_target(max(work_units, max(1, total)))
     processed = 0
-    while processed < max(1, total) and not STATE.should_stop():
+    while processed < STATE.target and not STATE.should_stop():
         _pump_commands()
         if STATE.state == RunState.PAUSE:
             time.sleep(0.2)
             continue
-        # do one unit of work
-        time.sleep(0.1)
+        time.sleep(0.25)
         processed += 1
+        STATE.inc_processed(1)
 
     log.info({"event": "backtest.done"})
