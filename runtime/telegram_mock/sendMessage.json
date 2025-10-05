@@ -3,9 +3,9 @@
   "result": {
     "message_id": 1,
     "chat": {
-      "id": 6758578842
+      "id": -4694894412
     },
-    "text": "probe"
+    "text": "run_once end 20251005_152649 dt=0.01s"
   },
-  "ts": 1759627928
+  "ts": 1759670809
 }

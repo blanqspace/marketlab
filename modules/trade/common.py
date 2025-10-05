@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 from ib_insync import IB, Stock, Forex, Contract
 
-# Projekt-Root für Imports sicherstellen (robust_lab/)
+# Projekt-Root für Imports sicherstellen (marketlab/)
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -118,3 +118,4 @@ def qualify_or_raise(ib: IB, c: Contract) -> Contract:
     if not res:
         raise RuntimeError(f"Contract konnte nicht qualifiziert werden: {c!r}")
     return res[0]
+

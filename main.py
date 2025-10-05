@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# codex: patch
 
 import os
 import time
@@ -15,7 +16,7 @@ logger = get_logger("main")
 
 # -------- CLI --------
 def parse_args():
-    p = argparse.ArgumentParser(description="robust_lab controller")
+    p = argparse.ArgumentParser(description="marketlab controller")
     p.add_argument("--run-once", action="store_true")
     p.add_argument("--loop-on", type=int, metavar="SECONDS")
     p.add_argument("--loop-off", action="store_true")
@@ -93,7 +94,7 @@ def run_menu(cc: ControlCenterShim):
             "2) Loop  ON/OFF\n"
             "3) SAFE  ON/OFF\n"
             "4) Status\n"
-            "5) Orders (Platzhalter)\n"
+            "5) Orders\n"
         )
         choice = input("Auswahl: ").strip().lower()
         if choice == "0":
@@ -121,7 +122,31 @@ def run_menu(cc: ControlCenterShim):
         elif choice == "4":
             print(f"Status → SAFE={cc.safe_mode} LOOP={cc.loop_enabled} LAST_RUN={cc.automation.last_run_id}")
         elif choice == "5":
-            print("Orders: Platzhalter.")
+            from shared.utils.orders import load_orders, add_order, cancel_order
+            orders = load_orders()
+            if not orders:
+                print("Keine Orders vorhanden.")
+            else:
+                print("\nAktuelle Orders:")
+                for i, o in enumerate(orders, 1):
+                    print(f"{i}) {o['symbol']} {o['side']} {o['qty']} @ {o['price']} [{o['status']}]")
+            print("\nOptionen:")
+            print("a) Neue Order hinzufügen")
+            print("c) Order stornieren")
+            print("Enter) Zurück")
+            cmd = input("Aktion: ").strip().lower()
+            if cmd == "a":
+                sym = input("Symbol: ").strip().upper()
+                side = input("Side (buy/sell): ").strip().lower()
+                qty = input("Qty: ").strip()
+                price = input("Preis: ").strip()
+                add_order(sym, side, qty, price)
+                print("Order hinzugefügt.")
+            elif cmd == "c":
+                sym = input("Symbol zum Stornieren: ").strip().upper()
+                cancel_order(sym)
+                print("Order storniert.")
+
         else:
             print("Ungültig.")
 
@@ -174,3 +199,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -1,0 +1,25 @@
+{
+  "context": [
+    "Projektname: marketlab",
+    "Ziel: Modulares, threadbasiertes Trading-System mit IBKR-Anbindung, Telegram-Integration, Logging, Lock-Management und Profilsteuerung.",
+    "Alle Änderungen sollen stabil, rückwärtskompatibel und sicher sein.",
+    "Python-Version: 3.13",
+    "Framework: kein externes Framework, nur stdlib + ib_insync + dotenv + requests.",
+    "Zentrale Module: shared/, modules/, tools/, runtime/",
+    "Bevorzugte Ausgabe: klare, kommentierte Codeblöcke."
+  ],
+  "rules": [
+    "Nur vollständige, ausführbare Python-Beispiele liefern.",
+    "Keine zusätzlichen Imports außer bei Bedarf.",
+    "Bei Dateiveränderungen: Pfad und Grund angeben.",
+    "Bei neuen Dateien: Minimales funktionsfähiges Template."
+  ],
+  "shortcuts": {
+    "patch": "Analysiere die angegebene Datei und liefere eine korrigierte oder erweiterte Version basierend auf bestehendem Stil.",
+    "explain": "Erkläre die Logik oder Abhängigkeiten einer Datei in Stichpunkten.",
+    "add": "Erstelle eine neue Python-Datei oder Klasse nach Projektstandard.",
+    "refactor": "Vereinheitliche Stil, Logging, Exception-Handling und Pfadstruktur.",
+    "inject": "Füge kontrolliert neuen Code in bestehende Funktion oder Klasse ein."
+  }
+}
+

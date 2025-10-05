@@ -1,0 +1,18 @@
+{
+  "orders": [
+    {
+      "symbol": "AAPL",
+      "side": "buy",
+      "qty": 10,
+      "price": 175.3,
+      "status": "cancelled"
+    },
+    {
+      "symbol": "MSFT",
+      "side": "sell",
+      "qty": 5,
+      "price": 320.1,
+      "status": "filled"
+    }
+  ]
+}

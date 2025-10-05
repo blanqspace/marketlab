@@ -108,7 +108,7 @@ def _handle_update(it: Dict[str, Any]) -> None:
         msg = it["message"]; chat = str(msg["chat"]["id"])
         text = (msg.get("text") or "").strip().lower()
         if text in ("/start", "/menu"):
-            _send(chat, "robust_lab • Steuerung", _main_menu_kb()); return
+            _send(chat, "marketlab • Steuerung", _main_menu_kb()); return
         # Fallback: immer das Menü zeigen
         _send(chat, "Menü:", _main_menu_kb()); return
 
@@ -131,7 +131,7 @@ def _loop():
     offset = _load_offset()
     # Initiales Menü (optional)
     if CHAT_CONTROL:
-        _send(CHAT_CONTROL, "robust_lab • Steuerbot aktiv.\nTippe /menu", None)
+        _send(CHAT_CONTROL, "marketlab • Steuerbot aktiv.\nTippe /menu", None)
     while _running:
         try:
             up = _get_updates(offset, timeout=30)
@@ -161,3 +161,4 @@ def stop_inline_bot():
     global _running
     _running = False
     print("Telegram Inline-Bot gestoppt.")
+
