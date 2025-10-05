@@ -1,6 +1,10 @@
 import os
 from dotenv import load_dotenv
 from shared.system.telegram_notifier import TelegramNotifier
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
 
 load_dotenv()
 enabled = str(os.getenv("TELEGRAM_ENABLED","0")) == "1"
