@@ -1,0 +1,18 @@
+{
+  "chat_id": 0,
+  "text": "🧾 Order 488e482998224780b9e9d33713e6c599\nBUY 1.0 AAPL @ MKT\nSL:None TP:None",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "text": "✅ Bestätigen",
+          "callback_data": "ORD:CONFIRM:488e482998224780b9e9d33713e6c599"
+        },
+        {
+          "text": "❌ Ablehnen",
+          "callback_data": "ORD:REJECT:488e482998224780b9e9d33713e6c599"
+        }
+      ]
+    ]
+  }
+}

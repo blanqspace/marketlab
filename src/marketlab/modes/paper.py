@@ -1,16 +1,30 @@
-import logging
-from marketlab.data.adapters import IBKRAdapter
-from marketlab.settings import RuntimeConfig
+import os, logging
+from ..data.adapters import IBKRAdapter
+from ..orders.store import list_tickets, set_state
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("marketlab.modes.paper")
 
+def run(profile, symbols, timeframe):
+    log.info({"event": "paper.start", "cfg": {"profile": profile, "symbols": symbols, "timeframe": timeframe}})
+    host = os.getenv("TWS_HOST", "127.0.0.1")
+    port = os.getenv("TWS_PORT", "7497")
+    client = int(os.getenv("IBKR_CLIENT_ID", "7"))
+    ib = IBKRAdapter()
+    ib.connect(host, port, client)
 
-def run(profile: str, symbols: list[str], timeframe: str) -> None:
-    cfg = RuntimeConfig(profile=profile, symbols=symbols, timeframe=timeframe)
-    log.info({"event": "paper.start", "cfg": cfg.model_dump()})
-    adapter = IBKRAdapter()
     for sym in symbols:
-        _ = adapter.stream_quotes(sym)
         log.info({"event": "paper.stream.init", "symbol": sym})
+        tick_iter = ib.stream_quotes(sym)
+        # Begrenzte Ticks im Smoke, Endlosschleife in echter Session anpassen
+        for _ in range(50):
+            tick = next(tick_iter)
+            # bestätigte Tickets dieses Symbols ausführen
+            for t in list_tickets():
+                if t["symbol"] != sym:
+                    continue
+                if t["state"] == "CONFIRMED":
+                    res = ib.submit_order(sym, t["side"], t["qty"], t["type"], t.get("limit"))
+                    set_state(t["id"], "EXECUTED")
+                    log.info({"event": "paper.order.exec", "ticket": t["id"], "result": res})
 
 

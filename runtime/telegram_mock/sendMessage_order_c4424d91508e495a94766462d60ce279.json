@@ -1,0 +1,17 @@
+{
+  "text": "🧾 Order-Ticket c4424d91508e495a94766462d60ce279\nBUY 1.0 SPY @ MKT\nSL:None TP:None",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "text": "✅ Bestätigen",
+          "callback_data": "ORD:CONFIRM:c4424d91508e495a94766462d60ce279"
+        },
+        {
+          "text": "❌ Ablehnen",
+          "callback_data": "ORD:REJECT:c4424d91508e495a94766462d60ce279"
+        }
+      ]
+    ]
+  }
+}

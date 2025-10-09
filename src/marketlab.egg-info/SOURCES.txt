@@ -15,6 +15,7 @@ src/marketlab/data/__init__.py
 src/marketlab/data/adapters.py
 src/marketlab/data/paths.py
 src/marketlab/modes/backtest.py
+src/marketlab/modes/control.py
 src/marketlab/modes/live.py
 src/marketlab/modes/paper.py
 src/marketlab/modes/replay.py

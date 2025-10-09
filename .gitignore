@@ -37,3 +37,8 @@ Thumbs.db
 
 # 📊 Große Datenordner (lokale Market-Daten, nicht versionieren)
 data/
+
+/reports/runs/
+/reports/reco/
+/reports/audit/
+#/runtime/

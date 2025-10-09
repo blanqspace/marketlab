@@ -1,0 +1,17 @@
+{
+  "text": "🧾 Order-Ticket b8ebfe71cbd8496e96638e836a8778f7\nBUY 10.0 AAPL @ 190.5\nSL:188.0 TP:192.0",
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "text": "✅ Bestätigen",
+          "callback_data": "ORD:CONFIRM:b8ebfe71cbd8496e96638e836a8778f7"
+        },
+        {
+          "text": "❌ Ablehnen",
+          "callback_data": "ORD:REJECT:b8ebfe71cbd8496e96638e836a8778f7"
+        }
+      ]
+    ]
+  }
+}
