@@ -12,8 +12,9 @@ class ClientRole(str, Enum):
 
 class IBKRSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
-    host: str = Field(..., alias="TWS_HOST")
-    port: int = Field(..., alias="TWS_PORT")
+    # Provide sensible defaults so non-IBKR commands still work without env
+    host: str = Field("127.0.0.1", alias="TWS_HOST")
+    port: int = Field(4002, alias="TWS_PORT")
 
 class TelegramSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
