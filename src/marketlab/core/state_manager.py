@@ -40,7 +40,13 @@ class StateManager:
     def set_mode(self, mode: str) -> None:
         self.mode = mode
 
-    def set_state(self, st: RunState) -> None:
+    def set_state(self, st: RunState | str) -> None:
+        if isinstance(st, str):
+            name = st.upper()
+            try:
+                st = RunState[name]
+            except Exception:
+                return
         self.state = st
         if st == RunState.RUN and self.started_ts == 0.0:
             self.started_ts = time.time()

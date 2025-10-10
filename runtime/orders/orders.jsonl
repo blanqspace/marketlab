@@ -14,3 +14,18 @@
 {"event": "order.put", "ticket": {"id": "af8d1107bbd8466d828cde67ffb2a3b7", "symbol": "AAPL", "side": "BUY", "qty": 1.0, "type": "MARKET", "limit": null, "sl": null, "tp": null, "created_at": "2025-10-09T20:53:17.089785+00:00", "expires_at": "2025-10-09T20:56:17.089785+00:00", "state": "PENDING", "checksum": "81c0d0d1ce5584fbeb7a01c6cfb97d8b9dd0947b421c64394379912ef2b80b76"}, "ts": 1760043197.09158}
 {"event": "order.state", "id": "488e482998224780b9e9d33713e6c599", "state": "CONFIRMED", "ts": 1760043272.0048187}
 {"event": "order.state", "id": "af8d1107bbd8466d828cde67ffb2a3b7", "state": "CONFIRMED", "ts": 1760043272.5007298}
+{"event": "order.state", "id": "b98e96a9b5d84ff3a8942c02656455f2", "state": "CONFIRMED", "ts": 1760052646.7719803}
+{"event": "order.put", "ticket": {"id": "4e3c4cb175e941c9b2e11c54194ef4ee", "symbol": "AAPL", "side": "BUY", "qty": 1.0, "type": "MARKET", "limit": null, "sl": null, "tp": null, "created_at": "2025-10-09T23:43:13.243901+00:00", "expires_at": "2025-10-09T23:45:13.243901+00:00", "state": "PENDING", "checksum": "b0949ad7e3d2c871fd3aadb71abf928d54028618c3011c42bba768241e74d2f4"}, "ts": 1760053393.2462282}
+{"event": "order.state", "id": "4e3c4cb175e941c9b2e11c54194ef4ee", "state": "CONFIRMED", "ts": 1760053394.2192981}
+{"event": "order.state", "id": "b98e96a9b5d84ff3a8942c02656455f2", "state": "EXECUTED", "ts": 1760126584.2383971}
+{"event": "order.state", "id": "cd440a74a46d44c4a6022cbd8a9d7ef3", "state": "EXECUTED", "ts": 1760126584.241513}
+{"event": "order.state", "id": "0d72dc989d624b2dadde76c5fe9d3c6f", "state": "EXECUTED", "ts": 1760126584.2441382}
+{"event": "order.state", "id": "488e482998224780b9e9d33713e6c599", "state": "EXECUTED", "ts": 1760126584.246366}
+{"event": "order.state", "id": "af8d1107bbd8466d828cde67ffb2a3b7", "state": "EXECUTED", "ts": 1760126584.248828}
+{"event": "order.state", "id": "4e3c4cb175e941c9b2e11c54194ef4ee", "state": "EXECUTED", "ts": 1760126584.2512336}
+{"event": "order.put", "ticket": {"id": "41bf9c7ec82c4b19a367cccf1c187f00", "symbol": "AAPL", "side": "BUY", "qty": 1.0, "type": "MARKET", "limit": null, "sl": null, "tp": null, "created_at": "2025-10-10T21:17:37.480281+00:00", "expires_at": "2025-10-10T21:20:37.480281+00:00", "state": "PENDING", "checksum": "d0e8880328957afa4ac45577d2d6a8d309b1c6a5c8c23af50d8e37e51ebafede"}, "ts": 1760131057.4824724}
+{"event": "order.state", "id": "41bf9c7ec82c4b19a367cccf1c187f00", "state": "CONFIRMED", "ts": 1760131095.1811788}
+{"event": "order.put", "ticket": {"id": "909aedbecf4b4ebf9a46a8f755f4147a", "symbol": "AAPL", "side": "BUY", "qty": 1.0, "type": "MARKET", "limit": null, "sl": null, "tp": null, "created_at": "2025-10-10T21:29:20.400860+00:00", "expires_at": "2025-10-10T21:32:20.400860+00:00", "state": "PENDING", "checksum": "d2085a08b2a066c3c2d3e43e56e4826c319174c73f65da92dcb7c70a491cbdd5"}, "ts": 1760131760.4028609}
+{"event": "order.state", "id": "909aedbecf4b4ebf9a46a8f755f4147a", "state": "CONFIRMED", "ts": 1760131762.7360501}
+{"event": "order.put", "ticket": {"id": "1a751e5bf0024d739a8fd4307913bf84", "symbol": "AAPL", "side": "BUY", "qty": 1.0, "type": "MARKET", "limit": null, "sl": null, "tp": null, "created_at": "2025-10-10T21:36:25.262258+00:00", "expires_at": "2025-10-10T21:39:25.262258+00:00", "state": "PENDING", "checksum": "db0e143d072218b7bdcecad32830c209920627406ff9a6ee90681e46d25f13bd"}, "ts": 1760132185.2641914}
+{"event": "order.state", "id": "1a751e5bf0024d739a8fd4307913bf84", "state": "CONFIRMED", "ts": 1760132187.3809586}

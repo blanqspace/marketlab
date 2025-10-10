@@ -1,10 +1,13 @@
 import typer
+import json, sys
 from .utils.logging import setup_logging
 from .settings import get_settings
 from .utils.signal_handlers import register_signal_handlers
 from .services.telegram_service import telegram_service
 from .orders.schema import OrderTicket
 from .orders.store import put_ticket, list_tickets, set_state, get_ticket
+from .core.status import snapshot
+from .modules.scanner_5m import scan_symbols, save_signals
 from datetime import datetime, timezone
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -56,6 +59,73 @@ def backtest(
     finally:
         _shutdown(ctx)
 
+@app.command("scan")
+def scan(
+    ctx: typer.Context,
+    symbols: str = typer.Option(..., "--symbols", help="Comma separated symbols"),
+    timeframe: str = typer.Option("5m", "--timeframe", help="5m or 2m"),
+    out: str = typer.Option("reports/signals_5m.csv", "--out", help="Output CSV path"),
+    json_out: bool = typer.Option(False, "--json", help="JSON output instead of file"),
+):
+    try:
+        syms = [s.strip() for s in symbols.split(",") if s.strip()]
+        df = scan_symbols(syms, timeframe)
+        if json_out:
+            recs = df.tail(100).to_dict(orient="records")
+            typer.echo(json.dumps(recs, ensure_ascii=False, indent=2))
+        else:
+            save_signals(df, out)
+            buy = int((df["signal"] == "BUY").sum()) if not df.empty else 0
+            sell = int((df["signal"] == "SELL").sum()) if not df.empty else 0
+            none = int((df["signal"] == "None").sum()) if not df.empty else 0
+            typer.echo({"rows": len(df), "BUY": buy, "SELL": sell, "None": none, "dst": out})
+    finally:
+        _shutdown(ctx)
+
+@app.command()
+def status(ctx: typer.Context, json_out: bool = typer.Option(False, "--json", help="JSON-Output")):
+    try:
+        s = snapshot()
+        if json_out:
+            typer.echo(json.dumps(s, ensure_ascii=False, indent=2))
+        else:
+            typer.echo(f"[{s['ts']}] mode={s['mode']} state={s['run_state']} processed={s['processed']} stop={s['should_stop']}")
+            typer.echo(f"telegram: enabled={s['telegram']['enabled']} mock={s['telegram']['mock']}")
+            typer.echo(f"orders: {s['orders']['counts']}")
+    finally:
+        _shutdown(ctx)
+
+@app.command("health")
+def health(ctx: typer.Context):
+    try:
+        s = snapshot()
+        ok = s["telegram"]["enabled"] and not s["should_stop"]
+        # simple checks: keine zwingende Regelverletzung
+        if ok:
+            typer.echo("OK"); raise typer.Exit(code=0)
+        else:
+            typer.echo("DEGRADED"); raise typer.Exit(code=1)
+    finally:
+        _shutdown(ctx)
+
+@app.command("orders-confirm")
+def orders_confirm(ctx: typer.Context,
+                   all_pending: bool = typer.Option(False, "--all-pending", help="Alle wartenden bestätigen"),
+                   include_telegram_confirmed: bool = typer.Option(True, "--include-tg", help="CONFIRMED_TG einschließen")):
+    try:
+        targets = []
+        if all_pending:
+            targets += [t["id"] for t in list_tickets("PENDING")]
+            if include_telegram_confirmed:
+                targets += [t["id"] for t in list_tickets("CONFIRMED_TG")]
+        if not targets:
+            typer.echo("Nichts zu bestätigen."); return
+        for oid in targets:
+            set_state(oid, "CONFIRMED")
+        typer.echo({"confirmed": len(targets)})
+    finally:
+        _shutdown(ctx)
+
 # replay
 @app.command()
 def replay(
@@ -81,10 +151,18 @@ def paper(
     profile: str = typer.Option("default", "--profile"),
     symbols: str = typer.Option(..., "--symbols"),
     timeframe: str = typer.Option("15m", "--timeframe"),
+    host: str | None = typer.Option(None, "--host", help="IBKR API host (overrides TWS_HOST)"),
+    port: int | None = typer.Option(None, "--port", help="IBKR API port (overrides TWS_PORT)"),
 ):
     from .modes import paper as pm
     try:
-        pm.run(profile, [s.strip() for s in symbols.split(",") if s.strip()], timeframe)
+        pm.run(
+            profile,
+            [s.strip() for s in symbols.split(",") if s.strip()],
+            timeframe,
+            host=host,
+            port=port,
+        )
     except Exception as e:
         telegram_service.notify_error(f"paper failed: {e}")
         raise

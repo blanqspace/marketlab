@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from uuid import uuid4
 import hashlib, json
 
-ORDER_STATES = {"PENDING","CONFIRMED","REJECTED","CANCELED","EXECUTED"}
+ORDER_STATES = {"PENDING","CONFIRMED_TG","CONFIRMED","REJECTED","CANCELED","EXECUTED"}
 
 @dataclass
 class OrderTicket:
@@ -37,4 +37,3 @@ class OrderTicket:
         return OrderTicket(**data)
 
     def to_dict(self): return asdict(self)
-

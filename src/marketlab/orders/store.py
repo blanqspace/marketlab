@@ -50,3 +50,13 @@ def list_tickets(state: str | None = None) -> list[dict]:
     vals = list(idx.values())
     return [v for v in vals if state is None or v["state"] == state]
 
+def counts() -> dict:
+    idx = load_index()
+    from collections import Counter
+    c = Counter(v["state"] for v in idx.values())
+    return dict(c)
+
+def first_by_state(state: str) -> dict | None:
+    for t in list_tickets(state):
+        return t
+    return None
