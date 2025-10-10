@@ -13,8 +13,9 @@ Commands (type and press Enter):
 """
 
 import sys, threading, queue, time, json
-import os, tempfile
+import os, tempfile, hashlib
 from collections import deque
+from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 from rich.layout import Layout
@@ -27,14 +28,30 @@ from src.marketlab.orders.store import list_tickets, set_state, first_by_state
 CMDQ = queue.Queue()
 LAST_MSG = ""
 LOG_LINES = deque(maxlen=200)
+LAST_HASH = None
+LAST_HEARTBEAT = 0.0
 
 LOCK = os.path.join(tempfile.gettempdir(), "marketlab_tui.lock")
+console = Console()
 
 def log(msg: str):
     try:
-        LOG_LINES.appendleft(f"[{snapshot()['ts']}] {msg}")
+        ts = snapshot()['ts']
     except Exception:
-        LOG_LINES.appendleft(msg)
+        ts = "NA"
+    LOG_LINES.appendleft(f"[{ts}] {msg}")
+
+
+# stable hash über wesentliche Teile zur Change-Erkennung
+def _state_hash():
+    s = snapshot()
+    key = json.dumps({
+        "counts": s["orders"]["counts"],
+        "run_state": s["run_state"],
+        "mode": s["mode"],
+        "tg": s["telegram"],
+    }, sort_keys=True)
+    return hashlib.md5(key.encode()).hexdigest()
 
 
 def _header():
@@ -117,10 +134,11 @@ def _handle_command(cmd: str) -> str:
     if head in ("s", "status"):
         log("status requested")
         try:
-            LOG_LINES.appendleft(json.dumps(snapshot(), ensure_ascii=False)[:1000])
+            mini = json.dumps(snapshot(), ensure_ascii=False)[:500]
+            LOG_LINES.appendleft(mini)
         except Exception:
             pass
-        return "status printed"
+        return "status logged"
     if head in ("p", "pause"):
         from src.marketlab.core.state_manager import STATE
         STATE.set_state("PAUSE")
@@ -186,7 +204,7 @@ def _input_reader():
 
 
 def main():
-    global LAST_MSG
+    global LAST_MSG, LAST_HASH, LAST_HEARTBEAT
     # single-instance guard
     if os.path.exists(LOCK):
         print("TUI already running.")
@@ -195,14 +213,11 @@ def main():
 
     t = threading.Thread(target=_input_reader, daemon=True)
     t.start()
-    last_draw = 0.0
+    LAST_HASH = _state_hash()
+    LAST_HEARTBEAT = time.time()
     try:
-        with Live(render(), refresh_per_second=1, screen=False, auto_refresh=False) as live:
+        with Live(render(), refresh_per_second=4, screen=True, auto_refresh=False) as live:
             while True:
-                # timed redraw
-                if time.time() - last_draw > 1.0:
-                    last_draw = time.time()
-                    live.update(render(), refresh=True)
                 # process commands
                 try:
                     cmd = CMDQ.get_nowait()
@@ -215,7 +230,18 @@ def main():
                     LAST_MSG = res
                     live.update(render(), refresh=True)
                 except queue.Empty:
-                    time.sleep(0.05)
+                    pass
+                # Zustand prüfen (hash-basiert) + Heartbeat
+                try:
+                    h = _state_hash()
+                except Exception:
+                    h = None
+                now = time.time()
+                if (h is not None and h != LAST_HASH) or (now - LAST_HEARTBEAT) > 5.0:
+                    LAST_HASH = h
+                    LAST_HEARTBEAT = now
+                    live.update(render(), refresh=True)
+                time.sleep(0.05)
     except KeyboardInterrupt:
         LAST_MSG = "exiting (Ctrl+C)"
         log(LAST_MSG)
