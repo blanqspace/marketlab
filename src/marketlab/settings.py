@@ -28,6 +28,13 @@ class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
     env_mode: str = Field("DEV", alias="ENV_MODE")
     app_brand: str = Field("MarketLab", alias="APP_BRAND")
+    # IPC / worker related
+    ipc_db: str = Field("runtime/ctl.db", alias="IPC_DB")
+    orders_two_man_rule: bool = Field(True, alias="ORDERS_TWO_MAN_RULE")
+    confirm_strict: bool = Field(True, alias="CONFIRM_STRICT")
+    # Orders UX
+    orders_token_len: int = Field(6, alias="ORDERS_TOKEN_LEN")
+    orders_show_recent: int = Field(6, alias="ORDERS_SHOW_RECENT")
     ibkr: IBKRSettings = IBKRSettings()
     telegram: TelegramSettings = TelegramSettings()
 

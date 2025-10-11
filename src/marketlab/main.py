@@ -1,13 +1,7 @@
-"""
-LEGACY, nicht mehr weiterentwickeln.
+"""LEGACY ENTRY"""
 
-Dieser Einstiegspunkt ist veraltet. Bitte verwende die Typer-CLI:
-
-    python -m marketlab
-"""
-
-def main():
-    print("[LEGACY] Bitte verwende 'python -m marketlab' für die aktuelle CLI.")
+def main() -> None:
+    print("Legacy main.py – bitte `python -m marketlab` verwenden")
 
 
 if __name__ == "__main__":

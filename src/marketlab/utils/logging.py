@@ -10,6 +10,11 @@ class _JsonFormatter(logging.Formatter):
             "msg": record.getMessage(),
             "logger": record.name,
         }
+        # Include token if present; never include internal order_id in logs
+        extras = getattr(record, "__dict__", {})
+        tok = extras.get("token")
+        if tok:
+            payload["token"] = tok
         if record.exc_info:
             payload["exc"] = self.formatException(record.exc_info)
         return json.dumps(payload, ensure_ascii=False)

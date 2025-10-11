@@ -5,7 +5,14 @@ from .settings import get_settings
 from .utils.signal_handlers import register_signal_handlers
 from .services.telegram_service import telegram_service
 from .orders.schema import OrderTicket
-from .orders.store import put_ticket, list_tickets, set_state, get_ticket
+from .orders.store import (
+    put_ticket,
+    list_tickets,
+    set_state,
+    get_ticket,
+    resolve_order,
+    get_pending,
+)
 from .core.status import snapshot
 from .modules.scanner_5m import scan_symbols, save_signals
 from datetime import datetime, timezone
@@ -14,6 +21,7 @@ from pathlib import Path
 import uuid
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
+
 
 @app.callback()
 def _init(ctx: typer.Context):
@@ -24,10 +32,12 @@ def _init(ctx: typer.Context):
     if settings.telegram.enabled:
         telegram_service.start_poller(settings)
 
+
 def _shutdown(ctx: typer.Context):
     settings = ctx.obj.get("settings")
     if settings and settings.telegram.enabled:
         telegram_service.stop_poller()
+
 
 # Beispiel: control
 @app.command()
@@ -76,6 +86,13 @@ def verify_data(
         _shutdown(ctx)
 
 
+@app.command("supervisor")
+def supervisor():
+    """Startet den Ein-Fenster-Supervisor (kein screen, keine Hotkeys)."""
+    from .supervisor import run_supervisor
+    run_supervisor()
+
+
 ctl = typer.Typer(help="Command bus operations")
 app.add_typer(ctl, name="ctl")
 
@@ -99,7 +116,17 @@ def ctl_enqueue(
 
 
 @ctl.command("drain")
-def ctl_drain(limit: int = typer.Option(10, "--limit")):
+def ctl_drain(
+    limit: int = typer.Option(10, "--limit"),
+    apply: bool = typer.Option(False, "--apply", help="Process commands using worker"),
+):
+    if apply:
+        from .daemon.worker import Worker
+        w = Worker()
+        seen = w.process_available(max_items=limit)
+        typer.echo({"processed": seen})
+        return
+    # legacy drain: mark as done without applying
     seen = 0
     while seen < limit:
         c = bus.next_new()
@@ -108,6 +135,14 @@ def ctl_drain(limit: int = typer.Option(10, "--limit")):
         bus.mark_done(c.cmd_id)
         seen += 1
     typer.echo({"drained": seen})
+
+
+@app.command("control-menu")
+def control_menu():
+    """Startet das nummernbasierte Control-Menü (stdin, keine Hotkeys)."""
+    from .control_menu import run_menu
+    run_menu()
+
 
 # backtest
 @app.command()
@@ -129,6 +164,7 @@ def backtest(
         raise
     finally:
         _shutdown(ctx)
+
 
 @app.command("scan")
 def scan(
@@ -153,6 +189,7 @@ def scan(
     finally:
         _shutdown(ctx)
 
+
 @app.command()
 def status(ctx: typer.Context, json_out: bool = typer.Option(False, "--json", help="JSON-Output")):
     try:
@@ -160,11 +197,14 @@ def status(ctx: typer.Context, json_out: bool = typer.Option(False, "--json", he
         if json_out:
             typer.echo(json.dumps(s, ensure_ascii=False, indent=2))
         else:
-            typer.echo(f"[{s['ts']}] mode={s['mode']} state={s['run_state']} processed={s['processed']} stop={s['should_stop']}")
+            typer.echo(
+                f"[{s['ts']}] mode={s['mode']} state={s['run_state']} processed={s['processed']} stop={s['should_stop']}"
+            )
             typer.echo(f"telegram: enabled={s['telegram']['enabled']} mock={s['telegram']['mock']}")
             typer.echo(f"orders: {s['orders']['counts']}")
     finally:
         _shutdown(ctx)
+
 
 @app.command("health")
 def health(ctx: typer.Context):
@@ -173,16 +213,21 @@ def health(ctx: typer.Context):
         ok = s["telegram"]["enabled"] and not s["should_stop"]
         # simple checks: keine zwingende Regelverletzung
         if ok:
-            typer.echo("OK"); raise typer.Exit(code=0)
+            typer.echo("OK")
+            raise typer.Exit(code=0)
         else:
-            typer.echo("DEGRADED"); raise typer.Exit(code=1)
+            typer.echo("DEGRADED")
+            raise typer.Exit(code=1)
     finally:
         _shutdown(ctx)
 
+
 @app.command("orders-confirm")
-def orders_confirm(ctx: typer.Context,
-                   all_pending: bool = typer.Option(False, "--all-pending", help="Alle wartenden bestätigen"),
-                   include_telegram_confirmed: bool = typer.Option(True, "--include-tg", help="CONFIRMED_TG einschließen")):
+def orders_confirm(
+    ctx: typer.Context,
+    all_pending: bool = typer.Option(False, "--all-pending", help="Alle wartenden bestätigen"),
+    include_telegram_confirmed: bool = typer.Option(True, "--include-tg", help="CONFIRMED_TG einschließen"),
+):
     try:
         targets = []
         if all_pending:
@@ -190,12 +235,14 @@ def orders_confirm(ctx: typer.Context,
             if include_telegram_confirmed:
                 targets += [t["id"] for t in list_tickets("CONFIRMED_TG")]
         if not targets:
-            typer.echo("Nichts zu bestätigen."); return
+            typer.echo("Nichts zu bestätigen.")
+            return
         for oid in targets:
             set_state(oid, "CONFIRMED")
         typer.echo({"confirmed": len(targets)})
     finally:
         _shutdown(ctx)
+
 
 # replay
 @app.command()
@@ -214,6 +261,7 @@ def replay(
         raise
     finally:
         _shutdown(ctx)
+
 
 # paper
 @app.command()
@@ -240,6 +288,7 @@ def paper(
     finally:
         _shutdown(ctx)
 
+
 # live
 @app.command()
 def live(
@@ -257,6 +306,7 @@ def live(
     finally:
         _shutdown(ctx)
 
+
 # orders
 @app.command("orders")
 def orders(
@@ -271,6 +321,9 @@ def orders(
     tp: float | None = typer.Option(None, "--tp"),
     id_: str = typer.Option(None, "--id"),
     ttl: int = typer.Option(120, "--ttl"),
+    token: str | None = typer.Option(None, "--token", help="Order token (SOT)"),
+    n: int | None = typer.Option(None, "--n", help="Index in pending list (1-based)"),
+    last: bool = typer.Option(False, "--last", help="Select last pending entry"),
 ):
     try:
         if action == "new":
@@ -281,17 +334,26 @@ def orders(
             typer.echo({"created": t.id})
         elif action == "list":
             typer.echo(list_tickets())
-        elif action == "confirm":
-            assert id_
-            t = get_ticket(id_)
-            if not t: raise ValueError("Unknown order id")
-            # Ablaufdatum prüfen
-            if datetime.fromisoformat(t["expires_at"]) < datetime.now(timezone.utc):
-                set_state(id_, "CANCELED"); typer.echo({"state":"CANCELED"}); return
-            set_state(id_, "CONFIRMED"); typer.echo({"state":"CONFIRMED"})
-        elif action == "reject":
-            assert id_
-            set_state(id_, "REJECTED"); typer.echo({"state":"REJECTED"})
+        elif action in ("confirm", "reject"):
+            selector: str | int | None = None
+            if last:
+                pend = get_pending(limit=1)
+                if not pend:
+                    raise ValueError("No pending orders")
+                selector = pend[0]["id"]
+            elif n is not None:
+                selector = int(n)
+            elif token:
+                selector = token
+            elif id_:
+                selector = id_
+            else:
+                raise ValueError("missing selector: --n | --token | --id | --last")
+            rec = resolve_order(selector)
+            cmd = f"orders.{action}"
+            bus.enqueue(cmd, {"id": rec["id"]}, source="cli")
+            # Token-only output
+            typer.echo(f"OK: {cmd} -> {rec.get('token')}")
         else:
             raise ValueError("action must be one of: new|list|confirm|reject")
     except Exception as e:
