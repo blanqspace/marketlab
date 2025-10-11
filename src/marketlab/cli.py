@@ -9,6 +9,9 @@ from .orders.store import put_ticket, list_tickets, set_state, get_ticket
 from .core.status import snapshot
 from .modules.scanner_5m import scan_symbols, save_signals
 from datetime import datetime, timezone
+from .ipc import bus
+from pathlib import Path
+import uuid
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 
@@ -37,6 +40,74 @@ def control(ctx: typer.Context):
         raise
     finally:
         _shutdown(ctx)
+
+
+@app.command("verify-data")
+def verify_data(
+    ctx: typer.Context,
+    symbols: str = typer.Option(..., "--symbols"),
+    timeframe: str = typer.Option("15m", "--timeframe"),
+    data_dir: str = typer.Option("data", "--data-dir"),
+    out: str | None = typer.Option(None, "--out"),
+):
+    from .utils.data_validator import validate_dataset
+    from .data.adapters import CSVAdapter
+    try:
+        syms = [s.strip() for s in symbols.split(",") if s.strip()]
+        results = []
+        for sym in syms:
+            stem = f"{sym}_{timeframe}".upper()
+            # prefer parquet then csv
+            p_parq = Path(data_dir) / f"{stem}.parquet"
+            p_csv = Path(data_dir) / f"{stem}.csv"
+            path = p_parq if p_parq.exists() else p_csv
+            res = validate_dataset(path, sym, timeframe)
+            results.append(res)
+            typer.echo(res)
+        if out:
+            Path(out).parent.mkdir(parents=True, exist_ok=True)
+            with open(out, "w", encoding="utf-8") as f:
+                import json
+                json.dump(results, f, ensure_ascii=False, indent=2)
+        status_codes = {"ok": 0, "warn": 0, "fail": 2}
+        worst = max((r["status"] for r in results), key=lambda s: ["ok", "warn", "fail"].index(s))
+        raise typer.Exit(code=status_codes.get(worst, 0))
+    finally:
+        _shutdown(ctx)
+
+
+ctl = typer.Typer(help="Command bus operations")
+app.add_typer(ctl, name="ctl")
+
+
+@ctl.command("enqueue")
+def ctl_enqueue(
+    cmd: str = typer.Option(..., "--cmd"),
+    args: str = typer.Option("{}", "--args"),
+    source: str = typer.Option("cli", "--source"),
+    ttl_sec: int = typer.Option(300, "--ttl"),
+    dedupe_key: str | None = typer.Option(None, "--dedupe"),
+):
+    import json as _json
+    try:
+        payload = _json.loads(args or "{}")
+    except Exception:
+        typer.echo({"error": "args must be JSON"})
+        raise typer.Exit(code=2)
+    cmd_id = bus.enqueue(cmd, payload, source=source, ttl_sec=ttl_sec, dedupe_key=dedupe_key)
+    typer.echo({"cmd_id": cmd_id})
+
+
+@ctl.command("drain")
+def ctl_drain(limit: int = typer.Option(10, "--limit")):
+    seen = 0
+    while seen < limit:
+        c = bus.next_new()
+        if not c:
+            break
+        bus.mark_done(c.cmd_id)
+        seen += 1
+    typer.echo({"drained": seen})
 
 # backtest
 @app.command()
@@ -228,3 +299,23 @@ def orders(
         raise
     finally:
         _shutdown(ctx)
+
+
+diag = typer.Typer(help="Diagnosewerkzeuge")
+app.add_typer(diag, name="diag")
+
+
+@diag.command("ibkr")
+def diag_ibkr(ctx: typer.Context):
+    from .data.adapters import IBKRAdapter
+    s = ctx.obj["settings"]
+    try:
+        adapter = IBKRAdapter().connect(s.ibkr.host, s.ibkr.port, client_id=7)
+        adapter.req_market_data_type_delayed()
+        ok = adapter.ping()
+        caps = adapter.capabilities()
+        typer.echo({"ok": ok, "capabilities": caps})
+        raise typer.Exit(code=0 if ok else 1)
+    except Exception as e:
+        typer.echo({"ok": False, "error": str(e)})
+        raise typer.Exit(code=1)

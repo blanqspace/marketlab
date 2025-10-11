@@ -25,7 +25,7 @@
 - Reif: Telegram-Service inkl. Mock-Poller und Mock-Werkzeuge (`runtime/telegram_mock/*`, `tools/tg_cli.py`, `tools/tg_dashboard.py`).
 - POC: Datenadapter `IBKRAdapter` (Stub, keine echte Verbindung/Streams).
 - POC: Modi `paper`/`live` (nur Stub-Aufrufe der Adapter, kein Orderflow).
-- POC/Legacy-Shim: `main.py` (argparse-Menü), nutzt `shared/*`-Layer getrennt von der Typer-CLI.
+- LEGACY: `main.py` (argparse-Menü) – nicht mehr weiterentwickeln. Bitte `python -m marketlab` nutzen.
 
 ## Ordnerstruktur (Auszug)
 
@@ -55,6 +55,9 @@ reports/
 - Replay: `python -m marketlab replay --profile default --symbols AAPL --timeframe 1h`
 - Paper: `python -m marketlab paper --profile default --symbols AAPL --timeframe 1m`
 - Live: `python -m marketlab live --profile default --symbols AAPL --timeframe 1m`
+- Daten prüfen: `python -m marketlab verify-data --symbols AAPL,MSFT --timeframe 15m`
+- IBKR Diagnose: `python -m marketlab diag ibkr`
+- Bus: `python -m marketlab ctl enqueue --cmd state.pause --args '{}'`
 
 Parameter (gemeinsam): `--profile`, `--symbols` (CSV), `--timeframe`. Backtest optional: `--start`, `--end`, `--work-units`.
 
