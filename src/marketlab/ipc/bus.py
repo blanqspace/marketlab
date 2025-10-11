@@ -45,6 +45,16 @@ def bus_init() -> None:
             );
             """
         )
+        # Lightweight application state key-value store
+        con.execute(
+            """
+            CREATE TABLE IF NOT EXISTS app_state (
+              key TEXT PRIMARY KEY,
+              value TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+            """
+        )
         con.execute(
             """
             CREATE TABLE IF NOT EXISTS events (
@@ -159,6 +169,32 @@ def emit(level: str, message: str, **fields: Any) -> None:
             "INSERT INTO events (level, message, fields) VALUES (?,?,?)",
             (level, message, json.dumps(fields, ensure_ascii=False) if fields else None),
         )
+
+
+def set_state(key: str, value: str) -> None:
+    """Persist a small app state value.
+
+    Stores as TEXT and updates ISO UTC timestamp.
+    """
+    from src.marketlab.core.timefmt import iso_utc  # local import to avoid cycles
+    bus_init()
+    with _connect() as con:
+        con.execute(
+            """
+            INSERT INTO app_state(key, value, updated_at)
+            VALUES(?,?,?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+            """,
+            (str(key), str(value), iso_utc()),
+        )
+
+
+def get_state(key: str, default: str = "") -> str:
+    bus_init()
+    with _connect() as con:
+        cur = con.execute("SELECT value FROM app_state WHERE key=?", (str(key),))
+        row = cur.fetchone()
+        return str(row[0]) if row and row[0] is not None else str(default)
 
 
 @dataclass

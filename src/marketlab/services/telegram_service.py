@@ -3,6 +3,8 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
 import json, urllib.request
+from src.marketlab.ipc import bus
+from src.marketlab.core.timefmt import iso_utc
 
 @dataclass
 class _TGSettings:
@@ -36,6 +38,16 @@ class TelegramService:
             self._chat_control = int(chat) if chat is not None else None
         except Exception:
             self._chat_control = None
+        # Persist TG state for dashboard
+        try:
+            bus.set_state("tg.enabled", "1" if enabled else "0")
+            bus.set_state("tg.mock", "1" if self._mock else "0")
+            bus.set_state("tg.bot_username", "")
+            bus.set_state("tg.chat_control", str(self._chat_control or ""))
+            allow = getattr(tg, "allowlist", []) if tg else []
+            bus.set_state("tg.allowlist_count", str(len(allow or [])))
+        except Exception:
+            pass
         if not enabled:
             return
         if self._mock:
@@ -127,4 +139,3 @@ class TelegramService:
         self._write_mock("callback_received", {"data": data})
 
 telegram_service = TelegramService()
-

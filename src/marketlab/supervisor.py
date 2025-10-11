@@ -12,6 +12,8 @@ from typing import Optional, Dict, Any, Tuple, List
 
 from src.marketlab.ipc import bus
 from src.marketlab.settings import get_settings
+from src.marketlab.core.status import queue_depth as _queue_depth, events_tail_agg
+from rich.console import Console
 
 
 # --- Process wrapper ---------------------------------------------------------
@@ -142,19 +144,59 @@ def spawn_dashboard(db_path: str) -> Proc:
     return Proc("dashboard", args, env)
 
 
-def _print_header(db_path: str, worker: Optional[Proc], dash: Optional[Proc]) -> None:
-    root = _root_dir()
+_last_health: Optional[Dict[str, Any]] = None
+
+
+def _statusline(db_path: str, worker: Optional[Proc], dash: Optional[Proc]) -> str:
     db_name = Path(db_path).name
     w_pid = worker.pid() if worker and worker.is_running() else None
     d_pid = dash.pid() if dash and dash.is_running() else None
-    print(f"DB={db_name}  root={root}")
-    print(f"worker PID={w_pid}  dashboard PID={d_pid}")
+    health_txt = "-" if _last_health is None else ("ok" if _last_health.get("ok") else "-")
+    try:
+        qd = _queue_depth(db_path)
+    except Exception:
+        qd = 0
+    return f"DB={db_name}  worker={w_pid}  dashboard={d_pid}  Health={health_txt}  QueueDepth={qd}"
 
 
-def _enqueue(cmd: str, args: Dict[str, Any]) -> str:
-    cid = bus.enqueue(cmd, args, source="supervisor", ttl_sec=300)
-    print(json.dumps({"enqueued": cmd, "cmd_id": cid}))
-    return cid
+def _print_header(db_path: str, worker: Optional[Proc], dash: Optional[Proc]) -> None:
+    print(_statusline(db_path, worker, dash))
+
+
+def build_menu_panel(db_path: str, worker: Optional[Proc], dash: Optional[Proc], message: str = ""):
+    """Construct a compact supervisor menu with statusline and optional one-line message."""
+    from rich.panel import Panel
+    from rich.table import Table
+    status = _statusline(db_path, worker, dash)
+    tbl = Table.grid(padding=(0, 1))
+    tbl.add_row(f"[bold]{status}[/bold]")
+    tbl.add_row("")
+    options = [
+        "1 Start ALL",
+        "2 Stop ALL",
+        "3 Restart ALL",
+        "4 Open Control-Menu",
+        "5 Pause",
+        "6 Resume",
+        "7 Mode: Paper",
+        "8 Mode: Live",
+        "9 Confirm (Token/Index)",
+        "10 Reject (Token/Index)",
+        "11 Health Check",
+        "12 Tail Events (10)",
+        "99 Exit",
+    ]
+    for line in options:
+        tbl.add_row(line)
+    if message:
+        tbl.add_row("")
+        tbl.add_row(f"[green]{message}[/green]")
+    return Panel(tbl, title="Supervisor", border_style="cyan")
+
+
+def enqueue(cmd: str, args: Dict[str, Any]) -> str:
+    """Enqueue without printing; used by supervisor dispatch."""
+    return bus.enqueue(cmd, args, source="supervisor", ttl_sec=300)
 
 
 def _resolve_token_or_index(arg: str) -> Tuple[str, Optional[str]]:
@@ -188,133 +230,146 @@ def _resolve_token_from_index(idx_str: str) -> Optional[str]:
         return None
 
 
-def _handle_menu_input(line: str, db_path: str, worker: Optional[Proc], dash: Optional[Proc]) -> Tuple[Optional[Proc], Optional[Proc]]:
+
+def dispatch(line: str, db_path: str, worker: Optional[Proc], dash: Optional[Proc]) -> Tuple[Optional[Proc], Optional[Proc], str]:
+    """Dispatch a single menu choice; return updated procs and one-line message."""
     choice = (line or "").strip()
     if not choice:
-        return worker, dash
-    match choice.split()[0]:
-        case "1":
-            ensure_bus(db_path)
-            worker = worker or spawn_worker(db_path)
-            dash = dash or spawn_dashboard(db_path)
-            if not worker.is_running():
+        return worker, dash, ""
+    msg = ""
+    head = choice.split()[0]
+    if head == "1":
+        ensure_bus(db_path)
+        worker = worker or spawn_worker(db_path)
+        dash = dash or spawn_dashboard(db_path)
+        if not worker.is_running():
+            worker.start()
+        if not dash.is_running():
+            dash.start()
+        msg = "OK: start all"
+    elif head == "2":
+        if worker:
+            worker.stop(); worker = None
+        if dash:
+            dash.stop(); dash = None
+        msg = "OK: stop all"
+    elif head == "3":
+        if worker:
+            worker.stop(); worker = None
+        if dash:
+            dash.stop(); dash = None
+        time.sleep(0.2)
+        ensure_bus(db_path)
+        worker = spawn_worker(db_path); worker.start()
+        dash = spawn_dashboard(db_path); dash.start()
+        msg = "OK: restart all"
+    elif head == "4":
+        env = _with_path_env({bus.DB_ENV: db_path})
+        subprocess.Popen([sys.executable, "-m", "marketlab", "control-menu"], env=env, creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
+        msg = "OK: open control-menu"
+    elif head == "5":
+        enqueue("state.pause", {})
+        msg = "OK: state.pause"
+    elif head == "6":
+        enqueue("state.resume", {})
+        msg = "OK: state.resume"
+    elif head == "7":
+        enqueue("mode.switch", {"target": "paper", "args": {"symbols": ["AAPL"], "timeframe": "1m"}})
+        msg = "OK: mode.paper"
+    elif head == "8":
+        enqueue("mode.switch", {"target": "live", "args": {"symbols": ["AAPL"], "timeframe": "1m"}})
+        msg = "OK: mode.live"
+    elif head == "9":
+        arg = "".join(choice.split()[1:]) or input("Token/Index: ").strip()
+        mode, val = _resolve_token_or_index(arg)
+        tok = val if mode == "token" else _resolve_token_from_index(val or "")
+        if tok:
+            enqueue("orders.confirm", {"token": tok})
+            msg = f"OK: orders.confirm -> {tok}"
+        else:
+            msg = "ERR: ungültig"
+    elif head == "10":
+        arg = "".join(choice.split()[1:]) or input("Token/Index: ").strip()
+        yn = input("Sicher ablehnen? (y/n): ").strip().lower()
+        if yn != "y":
+            msg = "abgebrochen"
+            return worker, dash, msg
+        mode, val = _resolve_token_or_index(arg)
+        tok = val if mode == "token" else _resolve_token_from_index(val or "")
+        if tok:
+            enqueue("orders.reject", {"token": tok})
+            msg = f"OK: orders.reject -> {tok}"
+        else:
+            msg = "ERR: ungültig"
+    elif head == "11":
+        res = health_ping(db_path, timeout_s=3)
+        global _last_health
+        _last_health = res
+        try:
+            q = _queue_depth(db_path)
+        except Exception:
+            q = 0
+        msg = f"health ok={bool(res.get('ok'))} queue={q}"
+        if not res.get("ok"):
+            if not (worker and worker.is_running()):
+                worker = spawn_worker(db_path)
                 worker.start()
-            if not dash.is_running():
-                dash.start()
-            print("started: worker + dashboard")
-        case "2":
-            if worker:
-                worker.stop(); worker = None
-            if dash:
-                dash.stop(); dash = None
-            print("stopped: worker + dashboard")
-        case "3":
-            if worker:
-                worker.stop(); worker = None
-            if dash:
-                dash.stop(); dash = None
-            time.sleep(0.2)
-            ensure_bus(db_path)
-            worker = spawn_worker(db_path); worker.start()
-            dash = spawn_dashboard(db_path); dash.start()
-            print("restarted: worker + dashboard")
-        case "4":
-            # open control-menu in new console
-            env = _with_path_env({bus.DB_ENV: db_path})
-            subprocess.Popen([sys.executable, "-m", "marketlab", "control-menu"], env=env, creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
-            print("opened: control-menu")
-        case "5":
-            _enqueue("state.pause", {})
-        case "6":
-            _enqueue("state.resume", {})
-        case "7":
-            _enqueue("mode.switch", {"target": "paper", "args": {"symbols": ["AAPL"], "timeframe": "1m"}})
-        case "8":
-            _enqueue("mode.switch", {"target": "live", "args": {"symbols": ["AAPL"], "timeframe": "1m"}})
-        case "9":
-            arg = "".join(choice.split()[1:]) or input("Token oder Index: ").strip()
-            mode, val = _resolve_token_or_index(arg)
-            tok = val if mode == "token" else _resolve_token_from_index(val or "")
-            if tok:
-                _enqueue("orders.confirm", {"token": tok})
-            else:
-                print("keine gültige Eingabe")
-        case "10":
-            arg = "".join(choice.split()[1:]) or input("Token oder Index: ").strip()
-            yn = input("Sicher ablehnen? (y/n): ").strip().lower()
-            if yn != "y":
-                print("abgebrochen")
-                return worker, dash
-            mode, val = _resolve_token_or_index(arg)
-            tok = val if mode == "token" else _resolve_token_from_index(val or "")
-            if tok:
-                _enqueue("orders.reject", {"token": tok})
-            else:
-                print("keine gültige Eingabe")
-        case "11":
-            res = health_ping(db_path, timeout_s=3)
-            print(json.dumps(res))
-            if not res.get("ok"):
-                # self-heal: if worker is down, restart worker only
-                if not (worker and worker.is_running()):
-                    worker = spawn_worker(db_path)
-                    worker.start()
-                    print("worker restarted")
-                else:
-                    print("Warnung: Commands bleiben NEW. Prüfe IPC_DB in allen Fenstern.")
-        case "12":
-            evs = bus.tail_events(10) or []
-            for e in evs:
-                ts = getattr(e, "ts", "-")
-                lvl = getattr(e, "level", "-")
-                msg = getattr(e, "message", "-")
-                print(f"{ts} {lvl} {msg}")
-        case "99":
-            if worker:
-                worker.stop(); worker = None
-            if dash:
-                dash.stop(); dash = None
-            print("exit")
-            raise SystemExit(0)
-        case _:
-            print("unbekannte Auswahl")
-    return worker, dash
-
-
+    elif head == "12":
+        try:
+            ag = events_tail_agg(db_path, n=50)
+        except Exception:
+            ag = []
+        for e in ag[:10]:
+            ts = e.get("ts", "-")
+            lvl = e.get("level", "-")
+            m0 = e.get("message", "-")
+            cnt = int(e.get("count", 1) or 1)
+            suffix = f" x{cnt}" if cnt > 1 else ""
+            print(f"{ts} {lvl} {m0}{suffix}")
+        input("Weiter [Enter]")
+    elif head == "99":
+        if worker:
+            worker.stop(); worker = None
+        if dash:
+            dash.stop(); dash = None
+        raise SystemExit(0)
+    else:
+        msg = "unbekannte Auswahl"
+    return worker, dash, (msg or "").replace("\n", " ").strip()
 def run_supervisor() -> None:
+    """Interactive static supervisor menu without Live rendering."""
     root = _root_dir()
     db_path = abs_ipc_db(root)
     os.environ[bus.DB_ENV] = db_path
 
     worker: Optional[Proc] = None
     dash: Optional[Proc] = None
+    last_msg: str = ""
 
+    console = Console(force_terminal=True, color_system="truecolor")
     while True:
-        _print_header(db_path, worker, dash)
-        print(
-            """
-1 Start All
-2 Stop All
-3 Restart All
-4 Open Control-Menu
-5 Pause
-6 Resume
-7 Mode: Paper
-8 Mode: Live
-9 Confirm (Token/Index)
-10 Reject  (Token/Index)
-11 Health Check
-12 Tail Events
-99 Exit
-""".strip()
-        )
+        console.clear()
+        print(_statusline(db_path, worker, dash))
+        print("1 Start ALL")
+        print("2 Stop ALL")
+        print("3 Restart ALL")
+        print("4 Open Control-Menu")
+        print("5 Pause")
+        print("6 Resume")
+        print("7 Mode: Paper")
+        print("8 Mode: Live")
+        print("9 Confirm (Token/Index)")
+        print("10 Reject (Token/Index)")
+        print("11 Health Check")
+        print("12 Tail Events (10)")
+        print("99 Exit")
+        if last_msg:
+            print(last_msg)
         try:
-            line = input(
-                "Auswahl: "
-            )
+            choice = input("Auswahl: ").strip()
         except EOFError:
             break
-        worker, dash = _handle_menu_input(line, db_path, worker, dash)
+        worker, dash, last_msg = dispatch(choice, db_path, worker, dash)
 
 
 # Expose helpers for tests
@@ -323,7 +378,10 @@ __all__ = [
     "abs_ipc_db",
     "ensure_bus",
     "health_ping",
+    "enqueue",
     "spawn_worker",
     "spawn_dashboard",
+    "dispatch",
     "run_supervisor",
+    "_statusline",
 ]

@@ -8,6 +8,7 @@ from typing import Any, Dict, Tuple
 from src.marketlab.ipc import bus
 from src.marketlab.orders import store as orders
 from src.marketlab.settings import get_settings
+from src.marketlab.core.timefmt import iso_utc
 
 
 @dataclass
@@ -79,9 +80,19 @@ class Worker:
     def _handle(self, name: str, args: dict[str, Any], source: str) -> bool:
         match name:
             case "state.pause":
+                # persist lowercase state for dashboard header stability
+                try:
+                    bus.set_state("state", "paused")
+                except Exception:
+                    pass
+                # keep legacy uppercase for events (tests/backcompat)
                 bus.emit("ok", "state.changed", state="PAUSED", source=source)
                 return True
             case "state.resume":
+                try:
+                    bus.set_state("state", "running")
+                except Exception:
+                    pass
                 bus.emit("ok", "state.changed", state="RUN", source=source)
                 return True
             case "state.stop":
@@ -101,6 +112,11 @@ class Worker:
                 return True
             case "mode.switch":
                 target = args.get("target")
+                try:
+                    if target:
+                        bus.set_state("mode", str(target))
+                except Exception:
+                    pass
                 bus.emit("info", "mode.enter", mode=target, source=source, args=args)
                 return True
             case _:
@@ -172,7 +188,30 @@ def run_forever(poll_interval: float = 0.5) -> None:  # pragma: no cover
     s = get_settings()
     os.environ[bus.DB_ENV] = s.ipc_db
     bus.bus_init()
-    bus.emit("info", "worker.start", ipc_db=s.ipc_db)
+    # Log startup and persist app_state for dashboard uptime/metadata
+    try:
+        pid = os.getpid()
+    except Exception:
+        pid = -1
+    start_ts = int(time.time())
+    try:
+        bus.set_state("worker_start_ts", iso_utc())
+        bus.set_state("state", "running")
+    except Exception:
+        pass
+    bus.emit("info", "worker.start", ipc_db=s.ipc_db, pid=pid, start_ts=start_ts)
+    # Optional: dry IBKR connectivity check
+    try:
+        if bool(getattr(getattr(s, "ibkr", object()), "enabled", False)):
+            from src.marketlab.data.adapters import IBKRAdapter
+            try:
+                a = IBKRAdapter()
+                a.connect(getattr(s.ibkr, "host", "127.0.0.1"), int(getattr(s.ibkr, "port", 4002)), int(getattr(s.ibkr, "client_id", 7)), timeout_sec=3)
+                a.disconnect()
+            except Exception:
+                pass
+    except Exception:
+        pass
     w = Worker()
     while True:
         processed = w.process_available()
