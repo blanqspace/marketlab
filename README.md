@@ -6,6 +6,7 @@ Kurzüberblick
 - Kernideen: klare Modi, einheitliche CLI, zentrale Settings, austauschbare Datenadapter.
 
 ## Quickstart
+Hinweis: Architektur-Übersicht und Laufzeit-Flows siehe `ARCHITEKTUR.md`.
 ```bash
 pip install -e .[dev]
 marketlab --help
