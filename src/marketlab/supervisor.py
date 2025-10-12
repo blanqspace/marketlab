@@ -151,30 +151,41 @@ def spawn_dashboard(db_path: str) -> Proc:
     return Proc("dashboard", args, env)
 
 
+def spawn_poller(db_path: str) -> Proc:
+    """Spawn Telegram poller using current .env settings.
+
+    Ensures same bus DB via IPC_DB and Python path.
+    """
+    env = _with_path_env({bus.DB_ENV: db_path})
+    args = [sys.executable, "-m", "tools.tg_poller"]
+    return Proc("poller", args, env)
+
+
 _last_health: Optional[Dict[str, Any]] = None
 
 
-def _statusline(db_path: str, worker: Optional[Proc], dash: Optional[Proc]) -> str:
+def _statusline(db_path: str, worker: Optional[Proc], dash: Optional[Proc], poller: Optional[Proc] = None) -> str:
     db_name = Path(db_path).name
     w_pid = worker.pid() if worker and worker.is_running() else None
     d_pid = dash.pid() if dash and dash.is_running() else None
+    p_pid = poller.pid() if poller and poller.is_running() else None
     health_txt = "-" if _last_health is None else ("ok" if _last_health.get("ok") else "-")
     try:
         qd = _queue_depth(db_path)
     except Exception:
         qd = 0
-    return f"DB={db_name}  worker={w_pid}  dashboard={d_pid}  Health={health_txt}  QueueDepth={qd}"
+    return f"DB={db_name}  worker={w_pid}  dashboard={d_pid}  poller={p_pid}  Health={health_txt}  QueueDepth={qd}"
 
 
-def _print_header(db_path: str, worker: Optional[Proc], dash: Optional[Proc]) -> None:
-    print(_statusline(db_path, worker, dash))
+def _print_header(db_path: str, worker: Optional[Proc], dash: Optional[Proc], poller: Optional[Proc]) -> None:
+    print(_statusline(db_path, worker, dash, poller))
 
 
-def build_menu_panel(db_path: str, worker: Optional[Proc], dash: Optional[Proc], message: str = ""):
+def build_menu_panel(db_path: str, worker: Optional[Proc], dash: Optional[Proc], message: str = "", poller: Optional[Proc] = None):
     """Construct a compact supervisor menu with statusline and optional one-line message."""
     from rich.panel import Panel
     from rich.table import Table
-    status = _statusline(db_path, worker, dash)
+    status = _statusline(db_path, worker, dash, poller)
     tbl = Table.grid(padding=(0, 1))
     tbl.add_row(f"[bold]{status}[/bold]")
     tbl.add_row("")
@@ -239,38 +250,46 @@ def _resolve_token_from_index(idx_str: str) -> Optional[str]:
 
 
 
-def dispatch(line: str, db_path: str, worker: Optional[Proc], dash: Optional[Proc]) -> Tuple[Optional[Proc], Optional[Proc], str]:
+def dispatch(line: str, db_path: str, worker: Optional[Proc], dash: Optional[Proc], poller: Optional[Proc]) -> Tuple[Optional[Proc], Optional[Proc], Optional[Proc], str]:
     global _last_health
     """Dispatch a single menu choice; return updated procs and one-line message."""
     choice = (line or "").strip()
     if not choice:
-        return worker, dash, ""
+        return worker, dash, poller, ""
     msg = ""
     head = choice.split()[0]
     if head == "1":
         ensure_bus(db_path)
         worker = worker or spawn_worker(db_path)
         dash = dash or spawn_dashboard(db_path)
+        poller = poller or spawn_poller(db_path)
         if not worker.is_running():
             worker.start()
         if not dash.is_running():
             dash.start()
+        if not poller.is_running():
+            poller.start()
         msg = "OK: start all"
     elif head == "2":
         if worker:
             worker.stop(); worker = None
         if dash:
             dash.stop(); dash = None
+        if poller:
+            poller.stop(); poller = None
         msg = "OK: stop all"
     elif head == "3":
         if worker:
             worker.stop(); worker = None
         if dash:
             dash.stop(); dash = None
+        if poller:
+            poller.stop(); poller = None
         time.sleep(0.2)
         ensure_bus(db_path)
         worker = spawn_worker(db_path); worker.start()
         dash = spawn_dashboard(db_path); dash.start()
+        poller = spawn_poller(db_path); poller.start()
         msg = "OK: restart all"
     elif head == "4":
         env = _with_path_env({bus.DB_ENV: db_path})
@@ -302,7 +321,7 @@ def dispatch(line: str, db_path: str, worker: Optional[Proc], dash: Optional[Pro
         yn = input("Sicher ablehnen? (y/n): ").strip().lower()
         if yn != "y":
             msg = "abgebrochen"
-            return worker, dash, msg
+            return worker, dash, poller, msg
         mode, val = _resolve_token_or_index(arg)
         tok = val if mode == "token" else _resolve_token_from_index(val or "")
         if tok:
@@ -352,7 +371,7 @@ def dispatch(line: str, db_path: str, worker: Optional[Proc], dash: Optional[Pro
         raise SystemExit(0)
     else:
         msg = "unbekannte Auswahl"
-    return worker, dash, (msg or "").replace("\n", " ").strip()
+    return worker, dash, poller, (msg or "").replace("\n", " ").strip()
 def run_supervisor() -> None:
     """Interactive static supervisor menu without Live rendering."""
     root = _root_dir()
@@ -361,12 +380,13 @@ def run_supervisor() -> None:
 
     worker: Optional[Proc] = None
     dash: Optional[Proc] = None
+    poller: Optional[Proc] = None
     last_msg: str = ""
 
     console = Console(force_terminal=True, color_system="truecolor")
     while True:
         console.clear()
-        print(_statusline(db_path, worker, dash))
+        print(_statusline(db_path, worker, dash, poller))
         print("1 Start ALL")
         print("2 Stop ALL")
         print("3 Restart ALL")
@@ -387,7 +407,7 @@ def run_supervisor() -> None:
             choice = input("Auswahl: ").strip()
         except EOFError:
             break
-        worker, dash, last_msg = dispatch(choice, db_path, worker, dash)
+        worker, dash, poller, last_msg = dispatch(choice, db_path, worker, dash, poller)
 
 
 # Expose helpers for tests
@@ -399,6 +419,7 @@ __all__ = [
     "enqueue",
     "spawn_worker",
     "spawn_dashboard",
+    "spawn_poller",
     "dispatch",
     "run_supervisor",
     "_statusline",
