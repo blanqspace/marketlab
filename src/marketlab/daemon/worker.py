@@ -8,6 +8,7 @@ from typing import Any, Dict, Tuple
 from src.marketlab.ipc import bus
 from src.marketlab.orders import store as orders
 from src.marketlab.settings import get_settings
+from src.marketlab.bootstrap.env import load_env
 from src.marketlab.core.timefmt import iso_utc
 
 
@@ -18,20 +19,13 @@ class WorkerConfig:
     ttl_seconds: int
 
 
-def _env_bool(name: str, default: bool = False) -> bool:
-    val = os.getenv(name)
-    if val is None:
-        return default
-    return str(val).strip() in ("1", "true", "TRUE", "yes", "on")
-
-
 def load_config() -> WorkerConfig:
-    # TTL for two-man approval window: TODO make configurable via ENV in future
-    ttl = int(os.getenv("ORDERS_TTL_SECONDS", "300"))
+    """Load worker config from App settings (no direct OS env access)."""
+    s = get_settings()
     return WorkerConfig(
-        two_man_rule=_env_bool("ORDERS_TWO_MAN_RULE", True),
-        confirm_strict=_env_bool("CONFIRM_STRICT", True),
-        ttl_seconds=ttl,
+        two_man_rule=bool(getattr(s, "orders_two_man_rule", True)),
+        confirm_strict=bool(getattr(s, "confirm_strict", True)),
+        ttl_seconds=int(getattr(s, "orders_ttl_seconds", 300)),
     )
 
 
@@ -85,15 +79,15 @@ class Worker:
                     bus.set_state("state", "paused")
                 except Exception:
                     pass
-                # keep legacy uppercase for events (tests/backcompat)
-                bus.emit("ok", "state.changed", state="PAUSED", source=source)
+                # emit state changed (legacy uppercase for event payload)
+                bus.emit("ok", "state.changed", state="PAUSED")
                 return True
             case "state.resume":
                 try:
                     bus.set_state("state", "running")
                 except Exception:
                     pass
-                bus.emit("ok", "state.changed", state="RUN", source=source)
+                bus.emit("ok", "state.changed", state="RUN")
                 return True
             case "state.stop":
                 bus.emit("ok", "state.changed", state="STOP", source=source)
@@ -105,7 +99,9 @@ class Worker:
                 if not oid:
                     bus.emit("error", "orders.reject.failed", reason="missing id", source=source)
                     return False
-                bus.emit("ok", "orders.reject.ok", token=tok, source=source)
+                # include sources list for clarity
+                srcs = [source] if source else []
+                bus.emit("ok", "orders.reject.ok", token=tok, sources=sorted(list(set(srcs))))
                 return True
             case "orders.confirm_all":
                 bus.emit("ok", "orders.confirm_all", source=source)
@@ -117,7 +113,8 @@ class Worker:
                         bus.set_state("mode", str(target))
                 except Exception:
                     pass
-                bus.emit("info", "mode.enter", mode=target, source=source, args=args)
+                # emit mode enter info; keep payload minimal
+                bus.emit("info", "mode.enter", mode=target)
                 return True
             case _:
                 bus.emit("warn", "unknown.cmd", cmd=name, source=source, args=args)
@@ -135,16 +132,19 @@ class Worker:
             if not first:
                 # record first approval
                 self._approvals[key] = (source, now)
-                bus.emit("warn", "orders.confirm.pending", token=tok, source=source)
+                # include initial source in sources list
+                init_sources = [source] if source else []
+                bus.emit("warn", "orders.confirm.pending", token=tok, sources=sorted(list(set(init_sources))))
                 return True
             first_source, ts = first
             if source == first_source:
                 # same source repeated
-                bus.emit("warn", "orders.confirm.pending", token=tok, source=source, note="same_source")
+                rep_sources = [s for s in [first_source, source] if s]
+                bus.emit("warn", "orders.confirm.pending", token=tok, sources=sorted(list(set(rep_sources))), note="same_source")
                 return True
             # second approval
             if now - ts <= self.cfg.ttl_seconds:
-                bus.emit("ok", "orders.confirm.ok", token=tok, sources=[first_source, source])
+                bus.emit("ok", "orders.confirm.ok", token=tok, sources=sorted(list(set([first_source, source]))))
                 # clear approval
                 self._approvals.pop(key, None)
                 return True
@@ -155,7 +155,8 @@ class Worker:
             self._approvals[key] = (source, now)
             return True
         # no two-man rule
-        bus.emit("ok", "orders.confirm.ok", token=tok, source=source)
+        srcs = [source] if source else []
+        bus.emit("ok", "orders.confirm.ok", token=tok, sources=sorted(list(set(srcs))))
         return True
 
     def _resolve_id_and_token(self, args: dict[str, Any]) -> tuple[str, str | None]:
@@ -184,8 +185,8 @@ class Worker:
 
 
 def run_forever(poll_interval: float = 0.5) -> None:  # pragma: no cover
-    # ensure a unified DB path from settings
-    s = get_settings()
+    # ensure a unified DB path from settings and mirror env for legacy code
+    s = load_env(mirror=True)
     os.environ[bus.DB_ENV] = s.ipc_db
     bus.bus_init()
     # Log startup and persist app_state for dashboard uptime/metadata

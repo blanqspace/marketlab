@@ -8,6 +8,8 @@ from urllib import request as _urlreq, parse as _urlparse
 from src.marketlab.services.telegram_usecases import build_main_menu, handle_callback
 from src.marketlab.ipc import bus
 from src.marketlab.core.timefmt import iso_utc
+from src.marketlab.settings import get_settings
+from src.marketlab.bootstrap.env import load_env
 
 
 class _HTTPResponse:
@@ -57,58 +59,49 @@ def _short(obj: Any, limit: int = 600) -> str:
 requests = _HTTP()  # exposed for tests to monkeypatch
 
 
-def _env_bool(name: str, default: bool = False) -> bool:
-    v = os.getenv(name)
-    if v is None:
-        return default
-    return str(v).strip().lower() in ("1", "true", "yes", "on")
-
-
-def _validate_env() -> tuple[dict, list[str]]:
-    """Validate required TELEGRAM_* env and return cfg + errors."""
+def _validate_env_from_settings() -> tuple[dict, list[str]]:
+    """Build and validate Telegram config from Settings()."""
+    s = load_env(mirror=True)  # ensure .env loaded and legacy keys mirrored
+    t = s.telegram
     cfg: dict[str, Any] = {}
     errs: list[str] = []
-    try:
-        token = os.environ["TELEGRAM_BOT_TOKEN"].strip()
-    except KeyError:
-        token = ""
+    token: str = (t.bot_token.get_secret_value() if t.bot_token else "").strip()
+    if not token:
         errs.append("TELEGRAM_BOT_TOKEN missing")
     if token and not re.match(r"^\d+:[A-Za-z0-9_-]{20,}$", token):
         errs.append("TELEGRAM_BOT_TOKEN format invalid (expected <digits>:<secret>)")
     cfg["token"] = token
 
-    chat_raw = os.getenv("TG_CHAT_CONTROL", "").strip()
-    if not chat_raw:
+    chat = t.chat_control
+    if chat is None:
         errs.append("TG_CHAT_CONTROL missing")
-        chat = None
     else:
         try:
-            chat = int(chat_raw)
+            chat = int(chat)
         except Exception:
-            chat = None
             errs.append("TG_CHAT_CONTROL must be integer (negative for groups)")
+            chat = None
     cfg["chat"] = chat
 
-    allow_raw = os.getenv("TG_ALLOWLIST", "").strip()
-    allow: set[int] = set()
-    if allow_raw:
-        bad: list[str] = []
-        for part in allow_raw.split(","):
-            s = part.strip()
-            if not s:
-                continue
-            try:
-                allow.add(int(s))
-            except Exception:
-                bad.append(s)
-        if bad:
-            errs.append("TG_ALLOWLIST contains non-integers: " + ", ".join(bad))
+    allow: set[int] = set(int(x) for x in (t.allowlist or []) if str(x).strip())
     cfg["allow"] = allow
-
-    cfg["timeout"] = int(os.getenv("TELEGRAM_TIMEOUT_SEC", "25") or 25)
-    cfg["debug"] = _env_bool("TELEGRAM_DEBUG", False)
-    cfg["enabled"] = _env_bool("TELEGRAM_ENABLED", False)
-    cfg["mock"] = _env_bool("TELEGRAM_MOCK", False)
+    cfg["timeout"] = int(t.timeout_sec)
+    try:
+        cfg["long_poll"] = int(getattr(t, "long_poll_sec", t.timeout_sec))
+    except Exception:
+        cfg["long_poll"] = int(t.timeout_sec)
+    cfg["debug"] = bool(t.debug)
+    cfg["enabled"] = bool(t.enabled)
+    cfg["mock"] = bool(t.mock)
+    # Publish state for dashboard panels
+    try:
+        bus.set_state("tg.enabled", "1" if t.enabled else "0")
+        bus.set_state("tg.mock", "1" if t.mock else "0")
+        if chat is not None:
+            bus.set_state("tg.chat_control", str(int(chat)))
+        bus.set_state("tg.allowlist_count", str(len(allow)))
+    except Exception:
+        pass
     return cfg, errs
 
 
@@ -132,7 +125,7 @@ def _log_http(debug: bool, prefix: str, url: str, payload: Any | None, resp: _HT
 
 
 def main(once: bool = False) -> int:
-    cfg, errs = _validate_env()
+    cfg, errs = _validate_env_from_settings()
     if errs:
         print("ERROR: Telegram environment invalid")
         for e in errs:
@@ -155,7 +148,16 @@ def main(once: bool = False) -> int:
     if not mock:
         url = f"{base}getMe"
         _log_http(debug, "-> GET", url, None, None)
-        me = requests.get(url, timeout=timeout)
+        try:
+            me = requests.get(url, timeout=timeout)
+        except Exception:
+            print("ERROR: getMe failed; invalid token or network")
+            try:
+                bus.set_state("tg.last_err", "getMe exception")
+                bus.emit("error", "tg.error", stage="getMe", status=-1)
+            except Exception:
+                pass
+            return 3
         _log_http(debug, "", url, None, me)
         if not me.ok:
             print("ERROR: getMe failed; invalid token or network")
@@ -222,7 +224,8 @@ def main(once: bool = False) -> int:
 
     while True:
         try:
-            upd_body: dict[str, Any] = {"timeout": 20}
+            lp = max(5, int(cfg.get("long_poll", timeout)))
+            upd_body: dict[str, Any] = {"timeout": lp}
             if offset is not None:
                 upd_body["offset"] = offset
             upd_url = f"{base}getUpdates"

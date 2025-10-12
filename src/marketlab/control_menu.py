@@ -12,6 +12,13 @@ from typing import Optional
 from .ipc import bus
 from .orders import store as orders
 from .settings import get_settings
+from .bootstrap.env import load_env
+
+# Ensure .env is loaded early (no-op if already cached)
+try:
+    load_env(mirror=True)
+except Exception:
+    pass
 
 
 def _ask_yes_no(prompt: str) -> bool:
@@ -224,4 +231,3 @@ def run_menu() -> None:
         else:
             sys.stdout.write("Ung ltige Auswahl.\n")
             sys.stdout.flush()
-

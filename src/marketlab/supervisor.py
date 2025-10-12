@@ -12,9 +12,16 @@ from typing import Optional, Dict, Any, Tuple, List
 
 from src.marketlab.ipc import bus
 from src.marketlab.settings import get_settings
+from src.marketlab.bootstrap.env import load_env
 from src.marketlab.core.status import queue_depth as _queue_depth, events_tail_agg
 from rich.console import Console
 
+
+# Ensure .env is loaded early and mirror legacy env keys
+try:
+    load_env(mirror=True)
+except Exception:
+    pass
 
 # --- Process wrapper ---------------------------------------------------------
 
@@ -183,6 +190,7 @@ def build_menu_panel(db_path: str, worker: Optional[Proc], dash: Optional[Proc],
         "9 Confirm (Token/Index)",
         "10 Reject (Token/Index)",
         "11 Health Check",
+        "r Refresh",
         "12 Tail Events (10)",
         "99 Exit",
     ]
@@ -232,6 +240,7 @@ def _resolve_token_from_index(idx_str: str) -> Optional[str]:
 
 
 def dispatch(line: str, db_path: str, worker: Optional[Proc], dash: Optional[Proc]) -> Tuple[Optional[Proc], Optional[Proc], str]:
+    global _last_health
     """Dispatch a single menu choice; return updated procs and one-line message."""
     choice = (line or "").strip()
     if not choice:
@@ -303,7 +312,6 @@ def dispatch(line: str, db_path: str, worker: Optional[Proc], dash: Optional[Pro
             msg = "ERR: ungültig"
     elif head == "11":
         res = health_ping(db_path, timeout_s=3)
-        global _last_health
         _last_health = res
         try:
             q = _queue_depth(db_path)
@@ -314,6 +322,15 @@ def dispatch(line: str, db_path: str, worker: Optional[Proc], dash: Optional[Pro
             if not (worker and worker.is_running()):
                 worker = spawn_worker(db_path)
                 worker.start()
+    elif head.lower() == "r":
+        # Recompute health and queue depth without side effects
+        try:
+            res = health_ping(db_path, timeout_s=1.0)
+        except Exception:
+            res = {"ok": False}
+        _last_health = res
+        _ = _queue_depth(db_path)  # compute to reflect in statusline next render
+        msg = "OK: refresh"
     elif head == "12":
         try:
             ag = events_tail_agg(db_path, n=50)
@@ -361,6 +378,7 @@ def run_supervisor() -> None:
         print("9 Confirm (Token/Index)")
         print("10 Reject (Token/Index)")
         print("11 Health Check")
+        print("r Refresh")
         print("12 Tail Events (10)")
         print("99 Exit")
         if last_msg:

@@ -44,6 +44,29 @@ Hinweise:
 - Dashboard ist read-only (keine Eingabe), alle Aktionen via CLI oder Telegram.
 - Telegram und CLI sprechen ausschließlich über den Bus; Two-man-Rule und TTL gelten.
 
+### .env laden
+
+- Alle Entry-Points (Supervisor, Worker, Dashboard, Telegram-Poller, Control-Menu) laden `.env` zentral über Pydantic-Settings (`src/marketlab/settings.py`).
+- Optionaler Helfer: `src/marketlab/bootstrap/env.py::load_env(mirror=True)` lädt `Settings()` und spiegelt relevante Keys in `os.environ` zurück (z. B. `IPC_DB`, `TELEGRAM_*`, `TG_*`, `EVENTS_REFRESH_SEC`, `KPIS_REFRESH_SEC`, `DASHBOARD_WARN_ONLY`).
+- Beim Start wird eine kompakte Zusammenfassung ausgegeben: `config.summary ...` inkl. maskiertem Bot-Token (`123:****`).
+
+Hinweise zur .env-Datei:
+- Ablage im Projekt-Root, Kodierung UTF-8.
+- Keine Inline-Kommentare in derselben Zeile (nur `KEY=VALUE`).
+- Telegram-Gruppen-IDs sind negativ (`-100...`).
+
+Diagnose-Beispiele:
+```
+python -c "from src.marketlab.settings import get_settings as gs; print(gs().model_dump())"
+python -m tools.tg_poller  # sollte getMe ok und Startbanner senden
+```
+
+Beispiel-Start ohne vorheriges Setzen von Umgebungsvariablen:
+```
+python -m tools.tg_poller
+```
+Voraussetzung: `.env` enthält korrekte Einträge (siehe unten), dann wird der Poller korrekt initialisiert.
+
 ## Telegram-Buttons und Befehle
 
 - Hauptmenü-Buttons (Inline): Pause, Resume, Stop, Confirm(ID), Reject(ID), Mode Paper, Mode Live
@@ -82,6 +105,9 @@ TELEGRAM_BOT_TOKEN=ignored
 IPC_DB=runtime/ctl.db
 ORDERS_TWO_MAN_RULE=1
 CONFIRM_STRICT=1
+EVENTS_REFRESH_SEC=5
+KPIS_REFRESH_SEC=15
+DASHBOARD_WARN_ONLY=0
 ```
 
 ## Telegram Troubleshooting

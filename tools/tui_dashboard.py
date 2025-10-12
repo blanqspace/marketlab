@@ -21,6 +21,7 @@ from src.marketlab.orders.store import list_tickets
 from src.marketlab.core.status import snapshot, snapshot_kpis, events_tail_agg
 import os
 from src.marketlab.settings import get_settings
+from src.marketlab.bootstrap.env import load_env
 from src.marketlab.core.timefmt import parse_iso, fmt_mm_ss
 
 
@@ -43,9 +44,9 @@ def _header() -> Panel:
     except Exception:
         mode = "-"
     app_settings = get_settings()
-    # Ensure bus reads the same DB path
-    os.environ["IPC_DB"] = app_settings.ipc_db
-    db_name = os.path.basename(app_settings.ipc_db)
+    # Use central settings for DB path (no direct OS env access)
+    dbp = app_settings.ipc_db
+    db_name = os.path.basename(dbp)
     # Uptime from worker_start_ts
     uptime_txt = "--:--"
     try:
@@ -70,6 +71,33 @@ def _header() -> Panel:
     g = Table.grid(expand=True); g.add_column(justify="left"); g.add_column(justify="right")
     g.add_row(left, right)
     return Panel(g, title="MarketLab Dashboard", border_style="cyan", padding=(0,2))
+
+
+def _label_event(ev: dict[str, Any]) -> str:
+    """Return a clear label for an aggregated event row."""
+    try:
+        raw_msg = str(ev.get("message", "-"))
+        fields = ev.get("fields") or {}
+        token = fields.get("token")
+        # normalize sources list
+        srcs: list[str] = []
+        if isinstance(fields.get("sources"), list):
+            srcs = [str(s) for s in fields.get("sources") if str(s).strip()]
+        elif fields.get("source"):
+            srcs = [str(fields.get("source"))]
+        srcs = sorted(list({s for s in srcs if s}))
+        if raw_msg == "orders.confirm.pending":
+            return f"Order Bestätigung ausstehend {token or '-'} [{'+'.join(srcs)}]"
+        if raw_msg == "orders.confirm.ok":
+            return f"Order bestätigt {token or '-'} [{'+'.join(srcs)}]"
+        if raw_msg == "orders.reject.ok":
+            return f"Order abgelehnt {token or '-'} [{'+'.join(srcs)}]"
+        if raw_msg == "state.changed":
+            st = fields.get("state") or "-"
+            return f"State geändert → {st}"
+        return raw_msg
+    except Exception:
+        return str(ev.get("message", "-"))
 
 
 def _orders_panel(filter_str: str = "") -> Panel:
@@ -114,9 +142,16 @@ def _orders_panel(filter_str: str = "") -> Panel:
                 for e in evs:
                     f = e.get("fields") or {}
                     if f.get("token") == t.get("token") and e.get("message") == "orders.confirm.pending":
-                        s = (f.get("source") or "").lower()
-                        if s:
-                            srcs.add(s)
+                        # prefer list of sources when available
+                        if isinstance(f.get("sources"), list):
+                            for s in f.get("sources"):
+                                s_l = (str(s) or "").lower()
+                                if s_l:
+                                    srcs.add(s_l)
+                        else:
+                            s = (f.get("source") or "").lower()
+                            if s:
+                                srcs.add(s)
                 if "telegram" in srcs:
                     badges += " [TG]"
                 if any(s for s in srcs if s != "telegram"):
@@ -161,13 +196,11 @@ def _events_panel(filter_str: str = "") -> Panel:
     tbl.add_column("lvl", width=6)
     tbl.add_column("msg", overflow="fold")
     # filter: filter=warn -> show warn/error only; allow env override
-    env_warn = False
     try:
-        from src.marketlab.settings import get_settings as _get
-        env_warn = bool(int(os.getenv("DASHBOARD_WARN_ONLY", str(_get().dashboard_warn_only))))
+        warn_cfg = int(get_settings().dashboard_warn_only)
     except Exception:
-        env_warn = False
-    warn_only = env_warn or any(part.lower() == "filter=warn" for part in (filter_str or "").split())
+        warn_cfg = 0
+    warn_only = bool(warn_cfg) or any(part.lower() == "filter=warn" for part in (filter_str or "").split())
     try:
         dbp = os.getenv("IPC_DB") or get_settings().ipc_db
         events = events_tail_agg(dbp, n=100) or []
@@ -185,7 +218,7 @@ def _events_panel(filter_str: str = "") -> Panel:
             rel = now - ts
             rel_s = f"-{rel//60:02d}:{rel%60:02d}"
             utc = time.strftime("%H:%M:%S", time.gmtime(ts)) if ts else "-"
-            msg = str(ev.get("message", "-"))
+            msg = _label_event(ev)
             cnt = int(ev.get("count", 1))
             if cnt > 1:
                 msg = f"{msg} x{cnt}"
@@ -334,7 +367,7 @@ def _peek_last_event_ts(db_path: str) -> int:
 
 def main_adaptive():  # pragma: no cover
     console = Console(force_terminal=True, color_system="truecolor")
-    s = get_settings()
+    s = load_env(mirror=True)
     os.environ["IPC_DB"] = s.ipc_db
     layout = render_layout()
     now = time.time()
@@ -343,12 +376,13 @@ def main_adaptive():  # pragma: no cover
     next_kpis_ts = now
     next_conn_ts = now
     last_event_ts = _peek_last_event_ts(s.ipc_db)
+    # refresh cadence via environment (defaults: events=5s, kpis=15s)
     try:
-        ev_every = max(1, int(getattr(s, "events_refresh_sec", 2)))
+        ev_every = max(1, int(get_settings().events_refresh_sec))
     except Exception:
-        ev_every = 2
+        ev_every = 5
     try:
-        kpi_every = max(1, int(getattr(s, "kpis_refresh_sec", 15)))
+        kpi_every = max(1, int(get_settings().kpis_refresh_sec))
     except Exception:
         kpi_every = 15
 
@@ -359,6 +393,15 @@ def main_adaptive():  # pragma: no cover
             if cur_last_ts > last_event_ts:
                 last_event_ts = cur_last_ts
                 next_events_ts = now
+                # if latest event is relevant to orders/state, refresh orders immediately
+                try:
+                    evs = tail_events(1)
+                    if evs:
+                        m0 = str(evs[0].message)
+                        if m0.startswith("orders.") or m0.startswith("state."):
+                            next_orders_ts = now
+                except Exception:
+                    pass
 
             filt = _current_filter()
             updated = False

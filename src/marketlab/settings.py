@@ -1,8 +1,9 @@
 from enum import Enum
-from pydantic import BaseModel, Field, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from functools import lru_cache
 from typing import Optional, List
-from pydantic import field_validator
+
+from pydantic import BaseModel, Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class ClientRole(str, Enum):
     MAIN = "MAIN"
@@ -25,9 +26,10 @@ class TelegramSettings(BaseSettings):
     bot_token: Optional[SecretStr] = Field(None, alias="TELEGRAM_BOT_TOKEN")
     chat_control: Optional[int] = Field(None, alias="TG_CHAT_CONTROL")
     mock: bool = Field(False, alias="TELEGRAM_MOCK")
-    timeout_sec: int = Field(25, alias="TELEGRAM_TIMEOUT_SEC")
-    debug: bool = Field(False, alias="TELEGRAM_DEBUG")
-    allowlist: List[int] = Field(default_factory=list, alias="TG_ALLOWLIST")
+    timeout_sec: int = Field(20, alias="TELEGRAM_TIMEOUT_SEC")
+    long_poll_sec: int = Field(20, alias="TELEGRAM_LONG_POLL_SEC")
+    debug: bool = Field(True, alias="TELEGRAM_DEBUG")
+    allowlist: List[int] | str = Field(default_factory=list, alias="TG_ALLOWLIST")
 
     @field_validator("allowlist", mode="before")
     @classmethod
@@ -63,23 +65,68 @@ class AppSettings(BaseSettings):
     ipc_db: str = Field("runtime/ctl.db", alias="IPC_DB")
     orders_two_man_rule: bool = Field(True, alias="ORDERS_TWO_MAN_RULE")
     confirm_strict: bool = Field(True, alias="CONFIRM_STRICT")
+    orders_ttl_seconds: int = Field(300, alias="ORDERS_TTL_SECONDS")
     # Orders UX
     orders_token_len: int = Field(6, alias="ORDERS_TOKEN_LEN")
     orders_show_recent: int = Field(6, alias="ORDERS_SHOW_RECENT")
     # Dashboard refresh cadence (seconds)
-    events_refresh_sec: int = Field(2, alias="EVENTS_REFRESH_SEC")
+    events_refresh_sec: int = Field(5, alias="EVENTS_REFRESH_SEC")
     kpis_refresh_sec: int = Field(15, alias="KPIS_REFRESH_SEC")
     # Dashboard event filter toggle
     dashboard_warn_only: int = Field(0, alias="DASHBOARD_WARN_ONLY")
     ibkr: IBKRSettings = IBKRSettings()
     telegram: TelegramSettings = TelegramSettings()
 
+    # --- Compatibility accessors (flat-style) ---
+    @property
+    def TELEGRAM_ENABLED(self) -> bool:  # pragma: no cover
+        return bool(self.telegram.enabled)
+
+    @property
+    def TELEGRAM_MOCK(self) -> bool:  # pragma: no cover
+        return bool(self.telegram.mock)
+
+    @property
+    def TELEGRAM_BOT_TOKEN(self) -> str:  # pragma: no cover
+        try:
+            return self.telegram.bot_token.get_secret_value() if self.telegram.bot_token else ""
+        except Exception:
+            return str(self.telegram.bot_token) if self.telegram.bot_token else ""
+
+    @property
+    def TG_CHAT_CONTROL(self) -> Optional[int]:  # pragma: no cover
+        return self.telegram.chat_control
+
+    @property
+    def TG_ALLOWLIST(self) -> List[int]:  # pragma: no cover
+        return list(self.telegram.allowlist or [])
+
+    @property
+    def TELEGRAM_TIMEOUT_SEC(self) -> int:  # pragma: no cover
+        return int(self.telegram.timeout_sec)
+
+    @property
+    def TELEGRAM_LONG_POLL_SEC(self) -> int:  # pragma: no cover
+        return int(self.telegram.long_poll_sec)
+
+    @property
+    def TELEGRAM_DEBUG(self) -> bool:  # pragma: no cover
+        return bool(self.telegram.debug)
+
 class RuntimeConfig(BaseModel):
     profile: str
     symbols: list[str]
     timeframe: str
 
-settings = AppSettings()
-
+@lru_cache(maxsize=1)
 def get_settings() -> AppSettings:
-    return settings
+    """Lädt .env + OS-ENV einmalig und cached die App-Settings."""
+    return AppSettings()
+
+# Keep a module-level reference for legacy code/tests
+settings = get_settings()
+
+# --- Backward compatibility ---
+# Some code may still import `Settings` from this module.
+# Provide an alias to the new `AppSettings` to avoid ImportError.
+Settings = AppSettings  # pragma: no cover
