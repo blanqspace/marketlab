@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-from src.marketlab.utils.data_validator import validate_dataset
+from marketlab.utils.data_validator import validate_dataset
 
 
 def _write_csv(fp: Path, rows):

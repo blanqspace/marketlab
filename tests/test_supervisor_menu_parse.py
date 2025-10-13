@@ -2,8 +2,8 @@ import json
 import os
 import sqlite3
 
-from src.marketlab.supervisor import ensure_bus, _resolve_token_or_index
-from src.marketlab.ipc import bus
+from marketlab.supervisor import ensure_bus, _resolve_token_or_index
+from marketlab.ipc import bus
 
 
 def test_parse_confirm_token_enqueues(tmp_path, monkeypatch):

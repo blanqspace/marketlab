@@ -2,7 +2,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from src.marketlab.ipc import bus
+from marketlab.ipc import bus
 
 
 def with_tmp_db(tmp_path) -> Path:

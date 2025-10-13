@@ -5,11 +5,11 @@ import time
 from dataclasses import dataclass
 from typing import Any, Dict, Tuple
 
-from src.marketlab.ipc import bus
-from src.marketlab.orders import store as orders
-from src.marketlab.settings import get_settings
-from src.marketlab.bootstrap.env import load_env
-from src.marketlab.core.timefmt import iso_utc
+from marketlab.ipc import bus
+from marketlab.orders import store as orders
+from marketlab.settings import get_settings
+from marketlab.bootstrap.env import load_env
+from marketlab.core.timefmt import iso_utc
 
 
 @dataclass
@@ -204,7 +204,7 @@ def run_forever(poll_interval: float = 0.5) -> None:  # pragma: no cover
     # Optional: dry IBKR connectivity check
     try:
         if bool(getattr(getattr(s, "ibkr", object()), "enabled", False)):
-            from src.marketlab.data.adapters import IBKRAdapter
+            from marketlab.data.adapters import IBKRAdapter
             try:
                 a = IBKRAdapter()
                 a.connect(getattr(s.ibkr, "host", "127.0.0.1"), int(getattr(s.ibkr, "port", 4002)), int(getattr(s.ibkr, "client_id", 7)), timeout_sec=3)

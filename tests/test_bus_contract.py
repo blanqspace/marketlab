@@ -5,7 +5,7 @@ import sqlite3
 from pathlib import Path
 import random
 
-from src.marketlab.ipc import bus
+from marketlab.ipc import bus
 
 
 def with_tmp_db(tmp_path):

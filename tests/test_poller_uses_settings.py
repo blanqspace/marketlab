@@ -38,7 +38,7 @@ def test_poller_uses_settings_not_osenv(monkeypatch):
     )
 
     # Monkeypatch settings getter used by bootstrap and poller
-    import src.marketlab.settings as settings_mod
+    import marketlab.settings as settings_mod
     monkeypatch.setattr(settings_mod, "get_settings", lambda: app, raising=True)
 
     # Import poller fresh

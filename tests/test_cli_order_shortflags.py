@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import os, sys, subprocess, json
-from src.marketlab.orders.schema import OrderTicket
-from src.marketlab.orders import store
-from src.marketlab.ipc import bus
+from marketlab.orders.schema import OrderTicket
+from marketlab.orders import store
+from marketlab.ipc import bus
 
 
 def with_tmp_db(tmp_path):

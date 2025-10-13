@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os
-from src.marketlab.ipc import bus
+from marketlab.ipc import bus
 
 
 def setup_tmp_db(tmp_path):

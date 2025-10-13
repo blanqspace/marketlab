@@ -35,10 +35,10 @@ def test_bootstrap_load_env_mirrors_keys(monkeypatch):
     )
 
     # Patch get_settings used by bootstrap
-    import src.marketlab.settings as settings_mod
+    import marketlab.settings as settings_mod
     monkeypatch.setattr(settings_mod, "get_settings", lambda: app, raising=True)
 
-    import src.marketlab.bootstrap.env as bootstrap
+    import marketlab.bootstrap.env as bootstrap
     importlib.reload(bootstrap)
 
     # Call loader

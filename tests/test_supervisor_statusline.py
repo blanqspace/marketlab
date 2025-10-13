@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import os
 
-from src.marketlab.ipc import bus
-from src.marketlab.supervisor import _statusline
+from marketlab.ipc import bus
+from marketlab.supervisor import _statusline
 
 
 def setup_db(tmp_path):

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import os
-from src.marketlab.orders.schema import OrderTicket
-from src.marketlab.orders import store
-from src.marketlab.services.telegram_usecases import build_main_menu, handle_callback
-from src.marketlab.ipc import bus
+from marketlab.orders.schema import OrderTicket
+from marketlab.orders import store
+from marketlab.services.telegram_usecases import build_main_menu, handle_callback
+from marketlab.ipc import bus
 
 
 def setup_tmp_db(tmp_path):

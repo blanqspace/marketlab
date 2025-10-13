@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import os
 
-from src.marketlab.supervisor import dispatch, ensure_bus
-from src.marketlab.ipc import bus
+from marketlab.supervisor import dispatch, ensure_bus
+from marketlab.ipc import bus
 
 
 def test_tail_events_once_shows_10_and_returns(tmp_path, monkeypatch, capsys):

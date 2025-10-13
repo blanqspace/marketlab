@@ -6,11 +6,11 @@ from typing import Any, Optional
 
 from marketlab.net.http import SafeHttpClient
 
-from src.marketlab.services.telegram_usecases import build_main_menu, handle_callback
-from src.marketlab.ipc import bus
-from src.marketlab.core.timefmt import iso_utc
-from src.marketlab.settings import get_settings
-from src.marketlab.bootstrap.env import load_env
+from marketlab.services.telegram_usecases import build_main_menu, handle_callback
+from marketlab.ipc import bus
+from marketlab.core.timefmt import iso_utc
+from marketlab.settings import get_settings
+from marketlab.bootstrap.env import load_env
 
 
 class _HTTPResponse:

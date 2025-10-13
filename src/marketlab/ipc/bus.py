@@ -176,7 +176,7 @@ def set_state(key: str, value: str) -> None:
 
     Stores as TEXT and updates ISO UTC timestamp.
     """
-    from src.marketlab.core.timefmt import iso_utc  # local import to avoid cycles
+    from marketlab.core.timefmt import iso_utc  # local import to avoid cycles
     bus_init()
     with _connect() as con:
         con.execute(

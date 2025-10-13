@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from src.marketlab.ipc import bus
-from src.marketlab.utils.timefmt import fmt_mm_ss
+from marketlab.ipc import bus
+from marketlab.utils.timefmt import fmt_mm_ss
 
 
 def test_set_get_state_roundtrip(tmp_path):

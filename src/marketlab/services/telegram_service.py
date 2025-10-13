@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from marketlab.net.http import SafeHttpClient
-from src.marketlab.core.timefmt import iso_utc
-from src.marketlab.ipc import bus
+from marketlab.core.timefmt import iso_utc
+from marketlab.ipc import bus
 
 @dataclass
 class _TGSettings:

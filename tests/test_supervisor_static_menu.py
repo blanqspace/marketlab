@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import os
 
-from src.marketlab.supervisor import _statusline, dispatch, ensure_bus
-from src.marketlab.ipc import bus
+from marketlab.supervisor import _statusline, dispatch, ensure_bus
+from marketlab.ipc import bus
 
 
 def test_static_menu_header_and_one_line_message(tmp_path, capsys):

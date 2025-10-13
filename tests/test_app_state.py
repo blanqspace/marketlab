@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-from src.marketlab.ipc import bus
+from marketlab.ipc import bus
 
 
 def test_set_get_state_roundtrip(tmp_path):

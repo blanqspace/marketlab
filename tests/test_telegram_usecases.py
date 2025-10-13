@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
-from src.marketlab.ipc import bus
-from src.marketlab.services.telegram_usecases import handle_callback
+from marketlab.ipc import bus
+from marketlab.services.telegram_usecases import handle_callback
 
 
 def setup_tmp_db(tmp_path):
@@ -13,7 +13,7 @@ def setup_tmp_db(tmp_path):
 def test_handle_callback_confirm_reject_n(tmp_path):
     setup_tmp_db(tmp_path)
     # With token-based callback
-    from src.marketlab.orders import store as _orders
+    from marketlab.orders import store as _orders
     tok = _orders.get_pending(limit=1)[0]["token"]
     handle_callback({"action": "confirm_token", "token": tok})
     cmd = bus.next_new()

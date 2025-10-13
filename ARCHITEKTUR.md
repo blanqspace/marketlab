@@ -28,7 +28,7 @@ flowchart LR
     W1[daemon/worker.py]\nTwo-man, TTL, Events
   end
   subgraph UI[Dashboard]
-    D1[tools/tui_dashboard.py]\nRead-only Panels
+    D1[marketlab.tui.dashboard]\nRead-only Panels
   end
   subgraph ORD[Orders/Store]
     O1[orders/store.py]\nJSON Index
@@ -53,25 +53,25 @@ flowchart LR
 ```
 
 Kernkomponenten
-- IPC-Bus: `src/marketlab/ipc/bus.py`
+- IPC-Bus: `marketlab.ipc.bus`
   - Tabellen: `commands(status: NEW|DONE|ERROR, available_at, ttl_sec, dedupe_key)`, `events(level, message, fields)`, `app_state(key,value,updated_at)`.
   - API (Auszug):
     - `enqueue(cmd: str, args: dict, source: str, ttl_sec=300, dedupe_key=None) -> str`
     - `next_new() -> Optional[Command]`, `mark_done(cmd_id)`, `mark_error(cmd_id, err, retry_backoff_sec)`
     - `emit(level, message, **fields)`, `set_state(key, value)`, `get_state(key, default="")`, `tail_events(limit)`
-- Worker-Daemon: `src/marketlab/daemon/worker.py`
+- Worker-Daemon: `marketlab.daemon.worker`
   - Verarbeitet `NEW`-Commands; emittiert Events wie `state.changed`, `orders.confirm.*`.
   - Two-Man-Rule: `orders.confirm` benötigt zwei unterschiedliche `source` (z. B. `cli` + `telegram`) innerhalb TTL.
   - TTL/Approvals in-memory; Events: `orders.confirm.pending` → `orders.confirm.ok` inkl. `sources=[...]`.
   - Aktualisiert `app_state` (z. B. `state=paused|running`, `mode=...`, `worker_start_ts`).
-- Dashboard: `tools/tui_dashboard.py`
+- Dashboard: `marketlab.tui.dashboard`
   - Panels: Header (Mode/State/Uptime/DB/PID), Orders (Top 20), KPIs (events/min, cmd-counts, TTL), Conn (IBKR/Telegram), Events (aggregiert).
   - Refresh: adaptiv über `EVENTS_REFRESH_SEC`/`KPIS_REFRESH_SEC` und Event-Tail-Änderungen.
   - Read-only: keine Eingabe, `screen=False`.
-- Supervisor (statisches Menü): `src/marketlab/supervisor.py`
+- Supervisor (statisches Menü): `marketlab.supervisor`
   - Befehle: Start/Stop/Restart ALL, Confirm/Reject per Token/Index, Mode Paper/Live, Pause/Resume, Tail Events, Health.
   - `[r]` Refresh aktualisiert Statuszeile (QueueDepth, Health, PIDs) ohne Live-UI.
-- Control-Menu (stdin): `src/marketlab/control_menu.py`
+- Control-Menu (stdin): `marketlab.control_menu`
   - Nummernauswahl; Pending-Liste paginiert; Auswahl per Zahl oder Token; keine Kopf-Wiederholung.
   - Enqueue: `orders.confirm|reject`, `state.pause|resume|stop`, `mode.switch`.
 - Telegram-Poller: `tools/tg_poller.py`
@@ -79,8 +79,8 @@ Kernkomponenten
   - Allowlist: `TG_ALLOWLIST` (CSV-IDs), Gruppen als negative IDs; Commands `/pause` `/resume` `/paper` `/live` `/confirm <TOKEN>` `/reject <TOKEN>`.
   - Buttons: `services/telegram_usecases.py::build_main_menu()`; Callbacks → `handle_callback()` → `enqueue(source="telegram")`.
 - Settings-Layer
-  - `src/marketlab/settings.py::get_settings()` (Singleton via pydantic-settings, `.env` UTF-8).
-  - Optionaler Bootstrap: `src/marketlab/bootstrap/env.py::load_env(mirror=True)` (spiegelt Schlüssel in `os.environ`).
+  - `marketlab.settings::get_settings()` (Singleton via pydantic-settings, `.env` UTF-8).
+  - Optionaler Bootstrap: `marketlab.bootstrap.env::load_env(mirror=True)` (spiegelt Schlüssel in `os.environ`).
 - Data
   - Bars: CSV/Parquet; Namensschema `SYMBOL_TIMEFRAME.{csv,parquet}`; Adapter `CSVAdapter`.
   - IBKR-Stub `IBKRAdapter`: setzt Delayed-Daten via `reqMarketDataType(3)`; `ping()`, `capabilities()`; optionale `submit_order()` Simulation.
@@ -141,8 +141,8 @@ Runbooks (Windows, DEV)
 - Start ALL (Supervisor)
   - `python -m marketlab supervisor`
 - Einzelprozesse
-  - Worker: `python -c "from src.marketlab.daemon.worker import run_forever; run_forever()"`
-  - Dashboard: `python -m tools.tui_dashboard`
+  - Worker: `python -c "from marketlab.daemon.worker import run_forever; run_forever()"`
+- Dashboard: `python -m marketlab.tui.dashboard`
   - Telegram-Poller: `python -m tools.tg_poller`
 - Health/Diag
   - Enqueue: `python -m marketlab ctl enqueue --cmd state.pause --args "{}"`
@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS events (
 
 Mini-Python (Signaturen)
 ```python
-from src.marketlab.ipc import bus
+from marketlab.ipc import bus
 cmd_id = bus.enqueue("state.pause", {}, source="cli", ttl_sec=300)
 c = bus.next_new(); bus.mark_done(c.cmd_id)
 bus.emit("ok", "orders.confirm.ok", token="ABC123", sources=["cli","telegram"]) 
@@ -201,4 +201,3 @@ Beispiel-Eventlabels
 - „Order bestätigt ABC123 [PC+TG]“ (intern: `orders.confirm.ok`, `sources=["cli","telegram"]`).
 - „Order ausstehend ABC123 [PC]“ (intern: `orders.confirm.pending`).
 - „State geändert → paused“ (intern: `state.changed`, `state=PAUSED`).
-

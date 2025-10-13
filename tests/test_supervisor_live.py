@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from rich.console import Console
-from src.marketlab.supervisor import build_menu_panel
+from marketlab.supervisor import build_menu_panel
 
 
 def test_menu_render_message(tmp_path):

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from src.marketlab.control_menu import _parse_selector
-from src.marketlab.orders.schema import OrderTicket
-from src.marketlab.orders import store
-from src.marketlab.ipc import bus
+from marketlab.control_menu import _parse_selector
+from marketlab.orders.schema import OrderTicket
+from marketlab.orders import store
+from marketlab.ipc import bus
 import os, sys, subprocess
 
 

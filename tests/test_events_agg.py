@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import os
 
-from src.marketlab.ipc import bus
-from src.marketlab.core.status import events_tail_agg
+from marketlab.ipc import bus
+from marketlab.core.status import events_tail_agg
 
 
 def setup_db(tmp_path):

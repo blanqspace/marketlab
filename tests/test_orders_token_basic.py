@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.marketlab.orders.store import new_token, assign_missing_tokens, load_index, save_index
+from marketlab.orders.store import new_token, assign_missing_tokens, load_index, save_index
 
 
 def test_new_token_charset_and_uniqueness():
@@ -14,7 +14,7 @@ def test_new_token_charset_and_uniqueness():
 
 def test_assign_missing_tokens_backfills(tmp_path, monkeypatch):
     # simulate store index with missing tokens
-    from src.marketlab.orders import store
+    from marketlab.orders import store
     monkeypatch.setenv("ENV_MODE", "TEST")
     store._ensure()
     idx = {}

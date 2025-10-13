@@ -9,9 +9,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Optional, Sequence
 
-from src.marketlab.bootstrap.env import load_env
-from src.marketlab.daemon.worker import Worker
-from src.marketlab.ipc import bus
+from marketlab.bootstrap.env import load_env
+from marketlab.daemon.worker import Worker
+from marketlab.ipc import bus
 
 
 def _stop_path() -> Path:

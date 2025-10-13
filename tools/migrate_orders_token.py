@@ -11,8 +11,8 @@ import os
 import sqlite3
 from typing import Tuple
 
-from src.marketlab.ipc import bus
-from src.marketlab.orders.store import new_token
+from marketlab.ipc import bus
+from marketlab.orders.store import new_token
 
 
 def _connect(path: str) -> sqlite3.Connection:

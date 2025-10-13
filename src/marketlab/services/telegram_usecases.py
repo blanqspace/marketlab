@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from src.marketlab.ipc import bus
-from src.marketlab.orders import store as orders
-from src.marketlab.settings import get_settings
+from marketlab.ipc import bus
+from marketlab.orders import store as orders
+from marketlab.settings import get_settings
 
 
 def build_main_menu() -> dict:

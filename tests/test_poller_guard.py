@@ -5,7 +5,7 @@ import os
 
 
 def _reload_settings():
-    import src.marketlab.settings as s
+    import marketlab.settings as s
     importlib.reload(s)
     return s
 

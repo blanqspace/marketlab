@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
-from src.marketlab.orders.schema import OrderTicket
-from src.marketlab.orders import store
+from marketlab.orders.schema import OrderTicket
+from marketlab.orders import store
 
 
 def test_generate_token_charset_and_length():

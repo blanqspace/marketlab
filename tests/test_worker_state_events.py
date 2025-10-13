@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
-from src.marketlab.ipc import bus
-from src.marketlab.daemon.worker import Worker
+from marketlab.ipc import bus
+from marketlab.daemon.worker import Worker
 
 
 def setup_db(tmp_path):

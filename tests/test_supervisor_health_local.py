@@ -2,9 +2,9 @@ import os
 import threading
 import time
 
-from src.marketlab.supervisor import ensure_bus, health_ping
-from src.marketlab.ipc import bus
-from src.marketlab.daemon.worker import Worker
+from marketlab.supervisor import ensure_bus, health_ping
+from marketlab.ipc import bus
+from marketlab.daemon.worker import Worker
 
 
 def test_health_ping_ok_with_local_worker(tmp_path, monkeypatch):

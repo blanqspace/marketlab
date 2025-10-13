@@ -4,10 +4,10 @@ import os
 import sqlite3
 import time
 
-from src.marketlab.ipc import bus
-from src.marketlab.core import status as st
-from src.marketlab.orders.schema import OrderTicket
-from src.marketlab.orders.store import put_ticket, set_state
+from marketlab.ipc import bus
+from marketlab.core import status as st
+from marketlab.orders.schema import OrderTicket
+from marketlab.orders.store import put_ticket, set_state
 
 
 def setup_db(tmp_path):

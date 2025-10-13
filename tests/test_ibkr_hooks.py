@@ -4,8 +4,8 @@ import os
 import sys
 import types
 
-from src.marketlab.ipc import bus
-from src.marketlab.data.adapters import IBKRAdapter
+from marketlab.ipc import bus
+from marketlab.data.adapters import IBKRAdapter
 
 
 def test_ibkr_connect_disconnect_state(monkeypatch, tmp_path):

@@ -1,6 +1,6 @@
 import os, sqlite3, time, json
 from datetime import datetime, timezone
-from src.marketlab.ipc import bus
+from marketlab.ipc import bus
 
 DB = os.environ.get("IPC_DB", "runtime/ctl.db")
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from src.marketlab.orders.schema import OrderTicket
-from src.marketlab.orders import store
-from src.marketlab.control_menu import _parse_selector
+from marketlab.orders.schema import OrderTicket
+from marketlab.orders import store
+from marketlab.control_menu import _parse_selector
 
 
 def test_resolve_order_by_token_and_index():

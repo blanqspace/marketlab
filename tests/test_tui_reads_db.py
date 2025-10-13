@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os, sys, subprocess
-from src.marketlab.ipc import bus
-from src.marketlab.settings import settings as app_settings
+from marketlab.ipc import bus
+from marketlab.settings import settings as app_settings
 from tools.tui_dashboard import _header
 from rich.console import Console
 import os as _os

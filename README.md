@@ -28,13 +28,13 @@ marketlab backtest --profile default --symbols AAPL,MSFT --timeframe 15m
   - Drain (DEV-Test): `python -m marketlab ctl drain --apply`
 
 - Fenster B: Read-only TUI Dashboard
-  - Kein Input, kein screen=True, 1–2 s Aktualisierung
-  - Start: `python -m tools.tui_dashboard`
-  - Zeigt Kopf (State, Heartbeat, UTC), links Orders Top-20, rechts Events (tail)
+  - Keine Eingabe, pollt alle 1 s, `q` beendet, `r` lädt Snapshot neu
+  - Start: `python -m marketlab.tui.dashboard`
+  - Zeigt Kopf (Mode/State/Uptime, Queue, Events/min), links Orders Top-20, rechts Event-Stream
 
 - Worker Daemon
   - Startet den Hintergrund-Worker, der NEW-Kommandos verarbeitet
-  - Start: `python -c "from src.marketlab.daemon.worker import run_forever; run_forever()"`
+  - Start: `python -c "from marketlab.daemon.worker import run_forever; run_forever()"`
 
 ## Environment / Settings
 
@@ -49,8 +49,8 @@ Hinweise:
 
 ### .env laden
 
-- Alle Entry-Points (Supervisor, Worker, Dashboard, Telegram-Poller) laden `.env` zentral über Pydantic-Settings (`src/marketlab/settings.py`).
-- Optionaler Helfer: `src/marketlab/bootstrap/env.py::load_env(mirror=True)` lädt `Settings()` und spiegelt relevante Keys in `os.environ` zurück (z. B. `IPC_DB`, `TELEGRAM_*`, `TG_*`, `EVENTS_REFRESH_SEC`, `KPIS_REFRESH_SEC`, `DASHBOARD_WARN_ONLY`).
+- Alle Entry-Points (Supervisor, Worker, Dashboard, Telegram-Poller) laden `.env` zentral über Pydantic-Settings (`marketlab.settings`).
+- Optionaler Helfer: `marketlab.bootstrap.env::load_env(mirror=True)` lädt `Settings()` und spiegelt relevante Keys in `os.environ` zurück (z. B. `IPC_DB`, `TELEGRAM_*`, `TG_*`, `EVENTS_REFRESH_SEC`, `KPIS_REFRESH_SEC`, `DASHBOARD_WARN_ONLY`).
 - Beim Start wird eine kompakte Zusammenfassung ausgegeben: `config.summary ...` inkl. maskiertem Bot-Token (`123:****`).
 
 Hinweise zur .env-Datei:
@@ -60,7 +60,7 @@ Hinweise zur .env-Datei:
 
 Diagnose-Beispiele:
 ```
-python -c "from src.marketlab.settings import get_settings as gs; print(gs().model_dump())"
+python -c "from marketlab.settings import get_settings as gs; print(gs().model_dump())"
 python -m tools.tg_poller  # sollte getMe ok und Startbanner senden
 ```
 

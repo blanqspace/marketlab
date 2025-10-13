@@ -8,28 +8,56 @@ version = "0.1.0"
 description = "MarketLab - modular trading research sandbox (CLI, modes, adapters)"
 authors = [{ name = "blanqspace" }]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
   "typer>=0.12",
   "pydantic>=2.7",
   "ib-insync>=0.9",
   "pandas>=2.2",
   "pyarrow>=17.0",
-  "requests>=2.32"
+  "requests>=2.32",
+  "rich>=13.7",
+  "textual>=0.47"
 ]
 
 [project.optional-dependencies]
 dev = [
+  "black>=24.8",
+  "bandit>=1.7",
+  "mypy>=1.10",
   "pytest>=8",
   "pytest-asyncio>=0.23",
-  "mypy>=1.10",
   "ruff>=0.6",
-  "black>=24.8",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 100
-select = ["E","F","I","UP","B"]
+target-version = "py310"
+src = ["src/marketlab"]
+extend-exclude = [
+  "src/marketlab/control_menu.py",
+]
+exclude = [
+  ".git",
+  ".github",
+  ".venv",
+  "control",
+  "tmp_*",
+  "automation",
+  "modules",
+  "shared",
+  "tests",
+  "tools",
+  "data_clean",
+  "reports",
+  "main.py",
+]
+
+[tool.ruff.lint]
+select = ["E","F","I","UP","B","PL","W","N"]
 
 [tool.black]
 line-length = 100
@@ -37,6 +65,14 @@ line-length = 100
 [tool.mypy]
 python_version = "3.11"
 warn_unused_ignores = true
+explicit_package_bases = true
+mypy_path = ["src"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["marketlab.tui", "marketlab.tui.*"]
 strict = true
 
-
+[[tool.mypy.overrides]]
+module = ["marketlab.worker", "marketlab.worker.*", "marketlab.daemon.worker"]
+strict = true

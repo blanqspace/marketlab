@@ -16,13 +16,21 @@ from rich.layout import Layout
 from rich.table import Table
 from rich import box
 
-from src.marketlab.ipc.bus import tail_events, get_state
-from src.marketlab.orders.store import list_tickets
-from src.marketlab.core.status import snapshot, snapshot_kpis, events_tail_agg
+import warnings
+
+from marketlab.ipc.bus import tail_events, get_state
+from marketlab.orders.store import list_tickets
+from marketlab.core.status import snapshot, snapshot_kpis, events_tail_agg
 import os
-from src.marketlab.settings import get_settings
-from src.marketlab.bootstrap.env import load_env
-from src.marketlab.core.timefmt import parse_iso, fmt_mm_ss
+from marketlab.settings import get_settings
+from marketlab.bootstrap.env import load_env
+from marketlab.core.timefmt import parse_iso, fmt_mm_ss
+
+warnings.warn(
+    "tools.tui_dashboard is deprecated; use marketlab.tui.dashboard instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 def _heartbeat_frame(now: float) -> str:

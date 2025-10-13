@@ -4,7 +4,7 @@ from typing import Optional
 
 import os
 
-from src.marketlab.settings import AppSettings, get_settings
+from marketlab.settings import AppSettings, get_settings
 
 
 def _mask_token(tok: Optional[str]) -> str:

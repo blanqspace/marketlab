@@ -2,8 +2,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from src.marketlab.ipc import bus
-from src.marketlab.daemon.worker import Worker, load_config, WorkerConfig
+from marketlab.ipc import bus
+from marketlab.daemon.worker import Worker, load_config, WorkerConfig
 
 
 def with_tmp_db(tmp_path) -> Path:
