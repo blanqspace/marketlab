@@ -19,7 +19,7 @@ def test_tail_events_once_shows_10_and_returns(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr("builtins.input", lambda *a, **k: "")
 
     # run tail once
-    w, d, msg = dispatch("12", db, None, None)
+    w, d, p, msg = dispatch("12", db, None, None)
     captured = capsys.readouterr()
 
     # It should print at most 10 lines (aggregated) and then return
@@ -27,4 +27,3 @@ def test_tail_events_once_shows_10_and_returns(tmp_path, monkeypatch, capsys):
     assert 1 <= len(lines) <= 10
     # no status message enforced for tail
     assert isinstance(msg, str)
-

@@ -12,10 +12,10 @@ from pathlib import Path
 import subprocess
 from typing import Optional, Dict, Any, Tuple, List, Sequence
 
-from src.marketlab.ipc import bus
-from src.marketlab.settings import AppSettings, get_settings
-from src.marketlab.bootstrap.env import load_env
-from src.marketlab.core.status import queue_depth as _queue_depth, events_tail_agg
+from marketlab.ipc import bus
+from marketlab.settings import AppSettings, get_settings
+from marketlab.bootstrap.env import load_env
+from marketlab.core.status import queue_depth as _queue_depth, events_tail_agg
 from rich.console import Console
 
 
@@ -142,14 +142,14 @@ def spawn_worker(db_path: str) -> Proc:
     }
     env = _with_path_env(env)
     # Use -c to call run_forever, as module has no __main__
-    code = "from src.marketlab.daemon.worker import run_forever; run_forever()"
+    code = "from marketlab.daemon.worker import run_forever; run_forever()"
     args = [sys.executable, "-u", "-c", code]
     return Proc("worker", args, env)
 
 
 def spawn_dashboard(db_path: str) -> Proc:
     env = _with_path_env({bus.DB_ENV: db_path})
-    args = [sys.executable, "-m", "tools.tui_dashboard"]
+    args = [sys.executable, "-m", "marketlab.tui.dashboard"]
     return Proc("dashboard", args, env)
 
 
@@ -232,7 +232,7 @@ def _resolve_token_or_index(arg: str) -> Tuple[str, Optional[str]]:
 
 def _resolve_token_from_index(idx_str: str) -> Optional[str]:
     try:
-        from src.marketlab.orders.store import list_tickets
+        from marketlab.orders.store import list_tickets
     except Exception:
         return None
     try:
@@ -252,7 +252,13 @@ def _resolve_token_from_index(idx_str: str) -> Optional[str]:
 
 
 
-def dispatch(line: str, db_path: str, worker: Optional[Proc], dash: Optional[Proc], poller: Optional[Proc]) -> Tuple[Optional[Proc], Optional[Proc], Optional[Proc], str]:
+def dispatch(
+    line: str,
+    db_path: str,
+    worker: Optional[Proc],
+    dash: Optional[Proc],
+    poller: Optional[Proc] = None,
+) -> Tuple[Optional[Proc], Optional[Proc], Optional[Proc], str]:
     global _last_health
     """Dispatch a single menu choice; return updated procs and one-line message."""
     choice = (line or "").strip()

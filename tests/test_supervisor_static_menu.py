@@ -18,7 +18,7 @@ def test_static_menu_header_and_one_line_message(tmp_path, capsys):
 
     # Dispatch a short command (pause) -> returns one-line message, prints nothing persistently
     out_before = capsys.readouterr()
-    w, d, msg = dispatch("5", db, None, None)
+    w, d, p, msg = dispatch("5", db, None, None)
     out_after = capsys.readouterr()
     assert (out_after.out or "").strip() == ""  # no persistent prints
     assert w is None and d is None  # no processes spawned for pause
@@ -27,4 +27,3 @@ def test_static_menu_header_and_one_line_message(tmp_path, capsys):
     # Header again is still compact and not duplicated
     hdr2 = _statusline(db, w, d)
     assert "DB=" in hdr2 and "\n" not in hdr2
-
