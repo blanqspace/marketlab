@@ -13,6 +13,13 @@ marketlab --help
 marketlab backtest --profile default --symbols AAPL,MSFT --timeframe 15m
 ```
 
+## Runtime via tmux
+- Start: `./tools/tmux_marketlab.sh`
+- Stop (sauber, behält Session): `./tools/stop_all.sh`
+- Neu verbinden: `tmux attach -t marketlab`
+- Logs: `logs/*.log` (Rotation durch `tools/proc_guard.py`)
+- Aktionen erfolgen via CLI/Telegram; keine stdin-Menüs.
+
 ## Steuerung und Dashboard
 
 - Fenster A: Control CLI
@@ -29,11 +36,6 @@ marketlab backtest --profile default --symbols AAPL,MSFT --timeframe 15m
   - Startet den Hintergrund-Worker, der NEW-Kommandos verarbeitet
   - Start: `python -c "from src.marketlab.daemon.worker import run_forever; run_forever()"`
 
-- Control-Menu (Nummern)
-  - Start: `python -m marketlab control-menu`
-  - Optionen: 1 Pause, 2 Resume, 3 Stop, 4 Confirm(ID), 5 Reject(ID), 6 Mode: Paper, 7 Mode: Live, 9 Exit
-  - Sicherheitsabfrage mit y/n; Ausgabe zeigt erzeugte Command-ID
-
 ## Environment / Settings
 
 Neue relevante Variablen:
@@ -47,7 +49,7 @@ Hinweise:
 
 ### .env laden
 
-- Alle Entry-Points (Supervisor, Worker, Dashboard, Telegram-Poller, Control-Menu) laden `.env` zentral über Pydantic-Settings (`src/marketlab/settings.py`).
+- Alle Entry-Points (Supervisor, Worker, Dashboard, Telegram-Poller) laden `.env` zentral über Pydantic-Settings (`src/marketlab/settings.py`).
 - Optionaler Helfer: `src/marketlab/bootstrap/env.py::load_env(mirror=True)` lädt `Settings()` und spiegelt relevante Keys in `os.environ` zurück (z. B. `IPC_DB`, `TELEGRAM_*`, `TG_*`, `EVENTS_REFRESH_SEC`, `KPIS_REFRESH_SEC`, `DASHBOARD_WARN_ONLY`).
 - Beim Start wird eine kompakte Zusammenfassung ausgegeben: `config.summary ...` inkl. maskiertem Bot-Token (`123:****`).
 

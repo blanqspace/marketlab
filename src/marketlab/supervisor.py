@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sqlite3
 import sys
 import time
+import signal
 from dataclasses import dataclass
 from pathlib import Path
 import subprocess
-from typing import Optional, Dict, Any, Tuple, List
+from typing import Optional, Dict, Any, Tuple, List, Sequence
 
 from src.marketlab.ipc import bus
-from src.marketlab.settings import get_settings
+from src.marketlab.settings import AppSettings, get_settings
 from src.marketlab.bootstrap.env import load_env
 from src.marketlab.core.status import queue_depth as _queue_depth, events_tail_agg
 from rich.console import Console
@@ -372,6 +374,138 @@ def dispatch(line: str, db_path: str, worker: Optional[Proc], dash: Optional[Pro
     else:
         msg = "unbekannte Auswahl"
     return worker, dash, poller, (msg or "").replace("\n", " ").strip()
+
+
+def _mask_token(token: Optional[str]) -> str:
+    if not token:
+        return "-"
+    try:
+        parts = str(token).split(":", 1)
+        if len(parts) == 2 and parts[0].isdigit():
+            return f"{parts[0]}:****"
+        return (str(token)[:4] + "****") if token else "-"
+    except Exception:
+        return "-"
+
+
+def _summary_line(settings: AppSettings) -> str:
+    try:
+        token_value = settings.telegram.bot_token.get_secret_value() if settings.telegram.bot_token else None
+    except Exception:
+        token_value = str(settings.telegram.bot_token) if settings.telegram.bot_token else None
+    allow_cnt = len(settings.telegram.allowlist or [])
+    brand = getattr(settings, "app_brand", "MarketLab")
+    mode = getattr(settings, "env_mode", "DEV")
+    db_name = os.path.basename(settings.ipc_db)
+    return (
+        f"config.summary brand={brand} mode={mode} db={db_name} "
+        f"tg.enabled={'1' if settings.telegram.enabled else '0'} "
+        f"tg.mock={'1' if settings.telegram.mock else '0'} "
+        f"tg.chat={settings.telegram.chat_control or '-'} "
+        f"tg.allow={allow_cnt} tg.token={_mask_token(token_value)}"
+    )
+
+
+def _health_check(db_path: str, timeout_s: float = 2.0) -> None:
+    result = health_ping(db_path, timeout_s=timeout_s)
+    ok_txt = "1" if result.get("ok") else "0"
+    status = result.get("status", "-")
+    events = result.get("events", 0)
+    print(f"supervisor.health ok={ok_txt} status={status} events={events}", flush=True)
+
+
+def _bus_poll_once(db_path: str) -> None:
+    depth = int(_queue_depth(db_path))
+    print(f"supervisor.bus queue_depth={depth}", flush=True)
+
+
+def _kpis_update(db_path: str) -> None:
+    events = events_tail_agg(db_path, n=5) or []
+    latest = events[0] if events else {}
+    level = latest.get("level", "-")
+    latest_msg = str(latest.get("message", "-")).replace("\n", " ")[:80]
+    count = len(events)
+    print(f"supervisor.kpis events={count} latest_level={level} latest_msg={latest_msg}", flush=True)
+
+
+def _stop_path() -> Path:
+    root = _root_dir()
+    stop_file = root / "runtime" / "stop"
+    stop_file.parent.mkdir(parents=True, exist_ok=True)
+    return stop_file
+
+
+def run_daemon(interval: float) -> None:
+    root = _root_dir()
+    db_path = abs_ipc_db(root)
+    os.environ[bus.DB_ENV] = db_path
+    ensure_bus(db_path)
+    stop_file = _stop_path()
+
+    running = True
+
+    def _sig_handler(*_: object) -> None:
+        nonlocal running
+        running = False
+
+    try:
+        signal.signal(signal.SIGINT, _sig_handler)
+        signal.signal(signal.SIGTERM, _sig_handler)
+    except Exception:
+        pass
+
+    while running:
+        if stop_file.exists():
+            running = False
+            break
+        try:
+            print(_summary_line(get_settings()), flush=True)
+        except Exception as e:  # pragma: no cover
+            print(f"supervisor.summary.error {e}", flush=True)
+        try:
+            _health_check(db_path)
+        except Exception as e:  # pragma: no cover
+            print(f"supervisor.health.error {e}", flush=True)
+        try:
+            _bus_poll_once(db_path)
+        except Exception as e:  # pragma: no cover
+            print(f"supervisor.bus.error {e}", flush=True)
+        try:
+            _kpis_update(db_path)
+        except Exception as e:  # pragma: no cover
+            print(f"supervisor.kpis.error {e}", flush=True)
+        if stop_file.exists():
+            running = False
+            break
+        deadline = time.time() + interval
+        while running and time.time() < deadline:
+            if stop_file.exists():
+                running = False
+                break
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+            time.sleep(min(0.25, remaining))
+    print("supervisor.stop", flush=True)
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = argparse.ArgumentParser(prog="marketlab.supervisor")
+    parser.add_argument("--interval", type=float, default=2.0, help="Loop sleep interval in seconds.")
+    parser.add_argument("--once", action="store_true", help="Run a single supervisor cycle and exit.")
+    args = parser.parse_args(argv)
+
+    interval = max(float(args.interval), 0.1)
+    if args.once:
+        return 0
+
+    try:
+        run_daemon(interval=interval)
+    except KeyboardInterrupt:
+        print("supervisor.stop", flush=True)
+    return 0
+
+
 def run_supervisor() -> None:
     """Interactive static supervisor menu without Live rendering."""
     root = _root_dir()
@@ -423,4 +557,10 @@ __all__ = [
     "dispatch",
     "run_supervisor",
     "_statusline",
+    "run_daemon",
+    "main",
 ]
+
+
+if __name__ == "__main__":  # pragma: no cover
+    sys.exit(main())
