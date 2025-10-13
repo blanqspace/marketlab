@@ -1,22 +1,30 @@
 # telegram/bot_control.py
 from __future__ import annotations
 
-import os, time, json, threading
-import requests
+import json
+import logging
+import os
+import threading
+import time
 from typing import Set
+
+import requests
 
 # ── Env ────────────────────────────────────────────────────────────────
 TOKEN = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
 API   = f"https://api.telegram.org/bot{TOKEN}"
 CHAT_CTRL = (os.getenv("TG_CHAT_CONTROL") or os.getenv("TELEGRAM_CHAT_ID") or "").strip()
+LOG = logging.getLogger(__name__)
 
 # Allowlist: TG_ALLOWLIST oder TG_ALLOW_USER_IDS oder TG_ADMIN
 def _parse_ids(s: str | None) -> Set[int]:
     if not s: return set()
     out = set()
     for part in s.replace(",", " ").split():
-        try: out.add(int(part))
-        except: pass
+        try:
+            out.add(int(part))
+        except ValueError as exc:
+            LOG.warning("Ignoring invalid Telegram id '%s': %s", part, exc)
     return out
 
 ALLOWED: Set[int] = (
@@ -32,6 +40,7 @@ def _ok_token() -> bool:
         r = requests.get(f"{API}/getMe", timeout=15)
         return r.status_code == 200 and r.json().get("ok") is True
     except Exception:
+        LOG.error("Failed to call getMe for Telegram bot.", exc_info=True)
         return False
 
 def _send(chat_id: str | int, text: str):
@@ -39,8 +48,9 @@ def _send(chat_id: str | int, text: str):
         payload = {"chat_id": str(chat_id), "text": text, "disable_web_page_preview": True}
         r = requests.post(f"{API}/sendMessage", json=payload, timeout=15)
         return r.status_code == 200, (r.json() if r.content else {})
-    except Exception as e:
-        return False, {"error": str(e)}
+    except Exception as exc:
+        LOG.error("Failed to send Telegram message.", exc_info=True)
+        return False, {"error": str(exc)}
 
 def _is_allowed(uid: int) -> bool:
     return uid in ALLOWED if ALLOWED else True
@@ -91,6 +101,7 @@ def _poll_loop(stop_flag):
                 if not msg: continue
                 if "text" in msg: _handle_text(msg)
         except Exception:
+            LOG.warning("Polling error while fetching Telegram updates.", exc_info=True)
             time.sleep(2)
 
 _STOP = threading.Event()

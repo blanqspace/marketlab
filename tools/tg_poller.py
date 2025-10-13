@@ -3,7 +3,8 @@ import time
 import json
 import re
 from typing import Any, Optional
-from urllib import request as _urlreq, parse as _urlparse
+
+from marketlab.net.http import SafeHttpClient
 
 from src.marketlab.services.telegram_usecases import build_main_menu, handle_callback
 from src.marketlab.ipc import bus
@@ -25,27 +26,22 @@ class _HTTPResponse:
 
 
 class _HTTP:
+    def __init__(self):
+        self._client = SafeHttpClient({"api.telegram.org"})
+
     def get(self, url: str, params: Optional[dict] = None, timeout: int = 5) -> _HTTPResponse:
-        if params:
-            qs = _urlparse.urlencode(params)
-            sep = '&' if '?' in url else '?'
-            url = f"{url}{sep}{qs}"
-        req = _urlreq.Request(url, method="GET")
-        with _urlreq.urlopen(req, timeout=timeout) as resp:
-            body = resp.read().decode("utf-8", errors="replace")
-            return _HTTPResponse(getattr(resp, "status", 200), body)
+        response = self._client.get(url, params=params or None, timeout=float(timeout))
+        return _HTTPResponse(response.status_code, response.text)
 
     def post(self, url: str, json: Optional[dict] = None, timeout: int = 5) -> _HTTPResponse:
-        data = (json or {})
-        payload = json_dump(data)
-        req = _urlreq.Request(url, data=payload, method="POST", headers={"Content-Type": "application/json"})
-        with _urlreq.urlopen(req, timeout=timeout) as resp:
-            body = resp.read().decode("utf-8", errors="replace")
-            return _HTTPResponse(getattr(resp, "status", 200), body)
-
-
-def json_dump(obj: Any) -> bytes:
-    return json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        data = json or {}
+        response = self._client.post(
+            url,
+            json=data,
+            timeout=float(timeout),
+            headers={"Content-Type": "application/json"},
+        )
+        return _HTTPResponse(response.status_code, response.text)
 
 
 def _short(obj: Any, limit: int = 600) -> str:

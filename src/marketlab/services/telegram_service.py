@@ -1,10 +1,13 @@
 from __future__ import annotations
-from pathlib import Path
 from dataclasses import dataclass
+import json
+import logging
+from pathlib import Path
 from typing import Any
-import json, urllib.request
-from src.marketlab.ipc import bus
+
+from marketlab.net.http import SafeHttpClient
 from src.marketlab.core.timefmt import iso_utc
+from src.marketlab.ipc import bus
 
 @dataclass
 class _TGSettings:
@@ -20,6 +23,8 @@ class TelegramService:
         self._base = Path("runtime/telegram_mock")
         self._bot_token: str | None = None
         self._chat_control: int | None = None
+        self._http = SafeHttpClient({"api.telegram.org"}, timeout=10)
+        self._log = logging.getLogger(__name__)
 
     def start_poller(self, settings: Any):
         if self._running:
@@ -46,8 +51,8 @@ class TelegramService:
             bus.set_state("tg.chat_control", str(self._chat_control or ""))
             allow = getattr(tg, "allowlist", []) if tg else []
             bus.set_state("tg.allowlist_count", str(len(allow or [])))
-        except Exception:
-            pass
+        except Exception as exc:
+            self._log.warning("Failed to publish telegram state: %s", exc)
         if not enabled:
             return
         if self._mock:
@@ -75,14 +80,8 @@ class TelegramService:
 
     def _send_real(self, method: str, payload: dict):
         url = f"https://api.telegram.org/bot{self._bot_token}/{method}"
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+        response = self._http.post(url, json=payload, timeout=10)
+        return response.json()
 
     def _api_post(self, method: str, payload: dict):
         if not getattr(self, "_bot_token", None):

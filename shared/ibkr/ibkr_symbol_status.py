@@ -1,6 +1,11 @@
-from ib_insync import Stock, Forex, IB
-from shared.ibkr.ibkr_client import IBKRClient
+import logging
 import time
+
+from ib_insync import IB, Forex, Stock
+
+from shared.ibkr.ibkr_client import IBKRClient
+
+LOG = logging.getLogger(__name__)
 
 DEFAULT_SYMBOLS = [
     ("AAPL", "stock"),
@@ -25,29 +30,37 @@ def check_symbol_availability(ib: IB, symbol: str, typ: str) -> str:
     if not contract:
         return "❓ Unbekannter Typ"
 
-    try:
-        ib.reqMarketDataType(1)
-        ticker = ib.reqMktData(contract, "", False, False)
-        time.sleep(0.8)
-        if ticker.bid or ticker.ask:
-            return "✅ Live"
-    except:
-        pass
-    finally:
-        try: ib.cancelMktData(ticker)
-        except: pass
+    def _try_market_data(market_data_type: int, label: str) -> str | None:
+        ticker = None
+        try:
+            ib.reqMarketDataType(market_data_type)
+            ticker = ib.reqMktData(contract, "", False, False)
+            time.sleep(0.8)
+            if ticker.bid or ticker.ask:
+                return label
+        except Exception as exc:
+            LOG.warning(
+                "Failed to fetch %s market data for %s (%s): %s",
+                label.lower(),
+                symbol,
+                typ,
+                exc,
+            )
+        finally:
+            if ticker is not None:
+                try:
+                    ib.cancelMktData(ticker)
+                except Exception as cancel_exc:
+                    LOG.debug("Error cancelling market data for %s: %s", symbol, cancel_exc)
+        return None
 
-    try:
-        ib.reqMarketDataType(3)
-        ticker = ib.reqMktData(contract, "", False, False)
-        time.sleep(0.8)
-        if ticker.bid or ticker.ask:
-            return "🟡 Delayed"
-    except:
-        pass
-    finally:
-        try: ib.cancelMktData(ticker)
-        except: pass
+    live = _try_market_data(1, "✅ Live")
+    if live:
+        return live
+
+    delayed = _try_market_data(3, "🟡 Delayed")
+    if delayed:
+        return delayed
 
     return "❌ Kein Zugriff"
 
@@ -86,4 +99,3 @@ def interactive_symbol_selection(default_list=None):
     except Exception:
         print("❌ Ungültige Auswahl.")
         return None
-

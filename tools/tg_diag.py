@@ -16,7 +16,8 @@ import argparse
 import json
 import os
 from typing import Any, Optional
-from urllib import request as _urlreq, parse as _urlparse
+
+from marketlab.net.http import SafeHttpClient
 
 
 class _Resp:
@@ -58,36 +59,27 @@ def _short(obj: Any, limit: int = 600) -> str:
     return s[:limit] + ("…" if len(s) > limit else "")
 
 
-def _get(url: str, params: Optional[dict] = None, timeout: int = 25) -> _Resp:
-    if params:
-        qs = _urlparse.urlencode(params)
-        sep = '&' if '?' in url else '?'
-        url = f"{url}{sep}{qs}"
-    req = _urlreq.Request(url, method="GET")
-    with _urlreq.urlopen(req, timeout=timeout) as r:
-        txt = r.read().decode("utf-8", errors="replace")
-        return _Resp(getattr(r, "status", 200), txt)
-
-
-def _post(url: str, payload: dict, timeout: int = 25) -> _Resp:
-    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    req = _urlreq.Request(url, data=body, method="POST", headers={"Content-Type": "application/json"})
-    with _urlreq.urlopen(req, timeout=timeout) as r:
-        txt = r.read().decode("utf-8", errors="replace")
-        return _Resp(getattr(r, "status", 200), txt)
-
-
 def _print_status(resp: _Resp) -> None:
     print(f"HTTP {resp.status_code}")
     print(_short(resp.json(), 600))
 
 
 class _HTTP:
+    def __init__(self):
+        self._client = SafeHttpClient({"api.telegram.org"})
+
     def get(self, url: str, params: dict | None = None, timeout: int = 25) -> _Resp:
-        return _get(url, params=params, timeout=timeout)
+        response = self._client.get(url, params=params or None, timeout=float(timeout))
+        return _Resp(response.status_code, response.text)
 
     def post(self, url: str, json: dict | None = None, timeout: int = 25) -> _Resp:
-        return _post(url, json or {}, timeout=timeout)
+        response = self._client.post(
+            url,
+            json=json or {},
+            timeout=float(timeout),
+            headers={"Content-Type": "application/json"},
+        )
+        return _Resp(response.status_code, response.text)
 
 
 # Provide a monkeypatchable shim for tests
