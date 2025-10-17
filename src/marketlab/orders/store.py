@@ -1,9 +1,14 @@
 from __future__ import annotations
+
+import json
+import random
+import threading
+import time
 from pathlib import Path
-import json, threading, time, random
 from typing import Any
-from .schema import OrderTicket, ORDER_STATES
+
 from ..settings import get_settings
+from .schema import ORDER_STATES, OrderTicket
 
 _BASE = Path("runtime/orders")
 _LOG = _BASE / "orders.jsonl"

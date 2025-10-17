@@ -1,11 +1,12 @@
 from __future__ import annotations
+
 import json
 import os
 import sqlite3
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Any
+from typing import Any
 
 DB_ENV = "IPC_DB"
 DEFAULT_DB = "runtime/ctl.db"
@@ -116,13 +117,13 @@ class Command:
     cmd_id: str
     cmd: str
     args: dict
-    source: Optional[str]
+    source: str | None
     retry_count: int
     available_at: int
-    ttl_sec: Optional[int]
+    ttl_sec: int | None
 
 
-def next_new(now: int | None = None) -> Optional[Command]:
+def next_new(now: int | None = None) -> Command | None:
     bus_init()
     ts = now if now is not None else _now()
     with _connect() as con:

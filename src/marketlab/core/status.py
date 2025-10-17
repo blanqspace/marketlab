@@ -1,13 +1,14 @@
 from __future__ import annotations
+
 import json
 import os
 import sqlite3
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from ..core.state_manager import STATE
-from ..orders.store import counts as order_counts, list_tickets
-from ..orders.store import load_index
+from ..orders.store import counts as order_counts
+from ..orders.store import list_tickets, load_index
 from ..services.telegram_service import telegram_service
 
 
@@ -54,7 +55,7 @@ def queue_depth(db_path: str) -> int:
         return 0
 
 
-def recent_cmd_counts(db_path: str, window_sec: int = 300) -> Dict[str, int]:
+def recent_cmd_counts(db_path: str, window_sec: int = 300) -> dict[str, int]:
     """Counts of commands created within window by status.
 
     Uses commands.available_at as creation time reference.
@@ -78,7 +79,7 @@ def recent_cmd_counts(db_path: str, window_sec: int = 300) -> Dict[str, int]:
         return {"NEW": 0, "DONE": 0, "ERROR": 0}
 
 
-def _events_stats(db_path: str, window_sec: int = 300) -> Tuple[float, int]:
+def _events_stats(db_path: str, window_sec: int = 300) -> tuple[float, int]:
     """Return (events_per_min, last_event_age_s)."""
     try:
         with _connect(db_path) as con:
@@ -96,7 +97,7 @@ def _events_stats(db_path: str, window_sec: int = 300) -> Tuple[float, int]:
         return (0.0, -1)
 
 
-def _orders_counts() -> Dict[str, int]:
+def _orders_counts() -> dict[str, int]:
     try:
         return order_counts() or {}
     except Exception:
@@ -114,7 +115,7 @@ def _parse_iso(ts: str) -> datetime | None:
             return None
 
 
-def orders_summary(db_path: str) -> Dict[str, Any]:
+def orders_summary(db_path: str) -> dict[str, Any]:
     """Return counts and TTL stats for pending orders plus two-man pending state.
 
     - counts: pending, confirmed, rejected
@@ -126,7 +127,7 @@ def orders_summary(db_path: str) -> Dict[str, Any]:
     try:
         idx = load_index()
         now = datetime.now(timezone.utc)
-        ttl_left: List[float] = []
+        ttl_left: list[float] = []
         for rec in idx.values():
             st = rec.get("state")
             if st in ("PENDING", "CONFIRMED_TG"):
@@ -163,7 +164,7 @@ def orders_summary(db_path: str) -> Dict[str, Any]:
     }
 
 
-def events_tail_agg(db_path: str, n: int = 100) -> List[Dict[str, Any]]:
+def events_tail_agg(db_path: str, n: int = 100) -> list[dict[str, Any]]:
     """Aggregate last N events by (level, message, fields-signature).
 
     Returns list of dicts with keys: ts (latest in group), level, message, fields, count.
@@ -174,7 +175,7 @@ def events_tail_agg(db_path: str, n: int = 100) -> List[Dict[str, Any]]:
                 "SELECT ts, level, message, fields FROM events ORDER BY id DESC LIMIT ?",
                 (int(max(1, n)),),
             )
-            groups: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
+            groups: dict[tuple[str, str, str], dict[str, Any]] = {}
             for r in cur.fetchall():
                 ts = int(r["ts"]) if r["ts"] is not None else 0
                 lvl = str(r["level"])
@@ -207,7 +208,7 @@ def events_tail_agg(db_path: str, n: int = 100) -> List[Dict[str, Any]]:
         return []
 
 
-def snapshot_kpis(db_path: str) -> Dict[str, Any]:
+def snapshot_kpis(db_path: str) -> dict[str, Any]:
     """Collect all KPIs needed by dashboard header and KPI panel."""
     # events stats
     per_min, last_age = _events_stats(db_path, window_sec=300)

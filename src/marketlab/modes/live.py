@@ -1,4 +1,5 @@
 import logging
+
 from marketlab.data.adapters import IBKRAdapter
 from marketlab.settings import RuntimeConfig
 

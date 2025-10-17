@@ -1,5 +1,6 @@
-from ..data.adapters import CSVAdapter
 from ..core.state_manager import STATE
+from ..data.adapters import CSVAdapter
+
 
 def run(settings, profile: str="default", symbols: str="", timeframe: str="15m", start=None, end=None, work_units: int=0):
     STATE.set_mode("backtest")

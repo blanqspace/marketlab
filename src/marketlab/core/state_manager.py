@@ -1,10 +1,11 @@
 from __future__ import annotations
-from enum import Enum, auto
-from dataclasses import dataclass, field, asdict
-from queue import Queue, Empty
-from threading import Event
-from typing import Optional
+
 import time
+from dataclasses import dataclass, field
+from enum import Enum, auto
+from queue import Empty, Queue
+from threading import Event
+
 
 class RunState(Enum):
     INIT = auto()
@@ -62,7 +63,7 @@ class StateManager:
     def post(self, cmd: Command) -> None:
         self._queue.put(cmd)
 
-    def get_nowait(self) -> Optional[Command]:
+    def get_nowait(self) -> Command | None:
         try:
             return self._queue.get_nowait()
         except Empty:

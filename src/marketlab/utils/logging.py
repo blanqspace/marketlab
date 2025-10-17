@@ -3,6 +3,7 @@ import json
 import logging
 import sys
 
+
 class _JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:  # type: ignore[override]
         payload = {

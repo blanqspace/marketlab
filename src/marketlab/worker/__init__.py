@@ -7,7 +7,8 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional
+from collections.abc import Sequence
 
 from marketlab.bootstrap.env import load_env
 from marketlab.daemon.worker import Worker
@@ -86,7 +87,7 @@ def run_daemon(interval: float) -> None:
     _log_stop()
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="marketlab.worker")
     parser.add_argument("--interval", type=float, default=1.0, help="Loop sleep interval in seconds.")
     parser.add_argument("--once", action="store_true", help="Process a single bus command and exit.")

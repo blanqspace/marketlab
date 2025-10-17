@@ -1,23 +1,24 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
+import signal
 import sqlite3
+import subprocess
 import sys
 import time
-import signal
 from dataclasses import dataclass
 from pathlib import Path
-import subprocess
-from typing import Optional, Dict, Any, Tuple, List, Sequence
+from typing import Any
+from collections.abc import Sequence
 
-from marketlab.ipc import bus
-from marketlab.settings import AppSettings, get_settings
-from marketlab.bootstrap.env import load_env
-from marketlab.core.status import queue_depth as _queue_depth, events_tail_agg
 from rich.console import Console
 
+from marketlab.bootstrap.env import load_env
+from marketlab.core.status import events_tail_agg
+from marketlab.core.status import queue_depth as _queue_depth
+from marketlab.ipc import bus
+from marketlab.settings import AppSettings, get_settings
 
 # Ensure .env is loaded early and mirror legacy env keys
 try:
@@ -30,10 +31,10 @@ except Exception:
 @dataclass
 class Proc:
     name: str
-    args: List[str]
-    env: Dict[str, str]
+    args: list[str]
+    env: dict[str, str]
     creationflags: int = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
-    popen: Optional[subprocess.Popen] = None
+    popen: subprocess.Popen | None = None
 
     def start(self) -> int:
         if self.is_running():
@@ -64,7 +65,7 @@ class Proc:
     def is_running(self) -> bool:
         return bool(self.popen and self.popen.poll() is None)
 
-    def pid(self) -> Optional[int]:
+    def pid(self) -> int | None:
         return int(self.popen.pid) if self.popen else None
 
 
@@ -81,7 +82,7 @@ def abs_ipc_db(root: Path) -> str:
     return str((rt / "ctl.db").resolve())
 
 
-def _with_path_env(base_env: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+def _with_path_env(base_env: dict[str, str] | None = None) -> dict[str, str]:
     env = dict(base_env or {})
     root = _root_dir()
     src_path = str((root / "src").resolve())
@@ -99,7 +100,7 @@ def ensure_bus(db_path: str) -> None:
     bus.bus_init()
 
 
-def _get_status_for_cmd(db_path: str, cmd_id: str) -> Optional[str]:
+def _get_status_for_cmd(db_path: str, cmd_id: str) -> str | None:
     con = sqlite3.connect(db_path)
     try:
         row = con.execute("SELECT status FROM commands WHERE cmd_id=?", (cmd_id,)).fetchone()
@@ -108,7 +109,7 @@ def _get_status_for_cmd(db_path: str, cmd_id: str) -> Optional[str]:
         con.close()
 
 
-def health_ping(db_path: str, timeout_s: float = 3.0) -> Dict[str, Any]:
+def health_ping(db_path: str, timeout_s: float = 3.0) -> dict[str, Any]:
     """Enqueue a state.pause and wait until processed or timeout.
 
     Returns: { 'ok': bool, 'status': 'DONE'|'NEW'|'ERROR', 'events': int }
@@ -163,10 +164,10 @@ def spawn_poller(db_path: str) -> Proc:
     return Proc("poller", args, env)
 
 
-_last_health: Optional[Dict[str, Any]] = None
+_last_health: dict[str, Any] | None = None
 
 
-def _statusline(db_path: str, worker: Optional[Proc], dash: Optional[Proc], poller: Optional[Proc] = None) -> str:
+def _statusline(db_path: str, worker: Proc | None, dash: Proc | None, poller: Proc | None = None) -> str:
     db_name = Path(db_path).name
     w_pid = worker.pid() if worker and worker.is_running() else None
     d_pid = dash.pid() if dash and dash.is_running() else None
@@ -179,11 +180,11 @@ def _statusline(db_path: str, worker: Optional[Proc], dash: Optional[Proc], poll
     return f"DB={db_name}  worker={w_pid}  dashboard={d_pid}  poller={p_pid}  Health={health_txt}  QueueDepth={qd}"
 
 
-def _print_header(db_path: str, worker: Optional[Proc], dash: Optional[Proc], poller: Optional[Proc]) -> None:
+def _print_header(db_path: str, worker: Proc | None, dash: Proc | None, poller: Proc | None) -> None:
     print(_statusline(db_path, worker, dash, poller))
 
 
-def build_menu_panel(db_path: str, worker: Optional[Proc], dash: Optional[Proc], message: str = "", poller: Optional[Proc] = None):
+def build_menu_panel(db_path: str, worker: Proc | None, dash: Proc | None, message: str = "", poller: Proc | None = None):
     """Construct a compact supervisor menu with statusline and optional one-line message."""
     from rich.panel import Panel
     from rich.table import Table
@@ -215,12 +216,12 @@ def build_menu_panel(db_path: str, worker: Optional[Proc], dash: Optional[Proc],
     return Panel(tbl, title="Supervisor", border_style="cyan")
 
 
-def enqueue(cmd: str, args: Dict[str, Any]) -> str:
+def enqueue(cmd: str, args: dict[str, Any]) -> str:
     """Enqueue without printing; used by supervisor dispatch."""
     return bus.enqueue(cmd, args, source="supervisor", ttl_sec=300)
 
 
-def _resolve_token_or_index(arg: str) -> Tuple[str, Optional[str]]:
+def _resolve_token_or_index(arg: str) -> tuple[str, str | None]:
     """Return (mode, value). mode: 'token' or 'index'."""
     arg = (arg or "").strip()
     if not arg:
@@ -230,14 +231,14 @@ def _resolve_token_or_index(arg: str) -> Tuple[str, Optional[str]]:
     return ("token", arg)
 
 
-def _resolve_token_from_index(idx_str: str) -> Optional[str]:
+def _resolve_token_from_index(idx_str: str) -> str | None:
     try:
         from marketlab.orders.store import list_tickets
     except Exception:
         return None
     try:
         idx = int(idx_str)
-        rows: List[Dict[str, Any]] = []
+        rows: list[dict[str, Any]] = []
         for st in ("PENDING", "CONFIRMED_TG", "CONFIRMED"):
             part = list_tickets(st) or []
             rows.extend(part)
@@ -255,10 +256,10 @@ def _resolve_token_from_index(idx_str: str) -> Optional[str]:
 def dispatch(
     line: str,
     db_path: str,
-    worker: Optional[Proc],
-    dash: Optional[Proc],
-    poller: Optional[Proc] = None,
-) -> Tuple[Optional[Proc], Optional[Proc], Optional[Proc], str]:
+    worker: Proc | None,
+    dash: Proc | None,
+    poller: Proc | None = None,
+) -> tuple[Proc | None, Proc | None, Proc | None, str]:
     global _last_health
     """Dispatch a single menu choice; return updated procs and one-line message."""
     choice = (line or "").strip()
@@ -382,7 +383,7 @@ def dispatch(
     return worker, dash, poller, (msg or "").replace("\n", " ").strip()
 
 
-def _mask_token(token: Optional[str]) -> str:
+def _mask_token(token: str | None) -> str:
     if not token:
         return "-"
     try:
@@ -495,7 +496,7 @@ def run_daemon(interval: float) -> None:
     print("supervisor.stop", flush=True)
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="marketlab.supervisor")
     parser.add_argument("--interval", type=float, default=2.0, help="Loop sleep interval in seconds.")
     parser.add_argument("--once", action="store_true", help="Run a single supervisor cycle and exit.")
@@ -518,9 +519,9 @@ def run_supervisor() -> None:
     db_path = abs_ipc_db(root)
     os.environ[bus.DB_ENV] = db_path
 
-    worker: Optional[Proc] = None
-    dash: Optional[Proc] = None
-    poller: Optional[Proc] = None
+    worker: Proc | None = None
+    dash: Proc | None = None
+    poller: Proc | None = None
     last_msg: str = ""
 
     console = Console(force_terminal=True, color_system="truecolor")

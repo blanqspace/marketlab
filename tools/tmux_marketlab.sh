@@ -23,9 +23,10 @@ tmux split-window -h \
 tmux select-pane -t 0
 tmux split-window -v "echo '[info] Poller (marketlab.tools.tg_poller) fehlt'; sleep infinity"
 
-# dashboard (Platzhalter)
+# dashboard (Textual TUI)
 tmux select-pane -t 1
-tmux split-window -v "echo '[info] Dashboard (marketlab.ui.dashboard) fehlt'; sleep infinity"
+tmux split-window -v \
+  "$PY tools/proc_guard.py --name dashboard -- $PY -m marketlab.tui.dashboard"
 
 tmux select-layout tiled
 tmux attach -t "$SESSION"

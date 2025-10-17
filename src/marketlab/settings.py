@@ -1,9 +1,9 @@
 from enum import Enum
 from functools import lru_cache
-from typing import Optional, List
 
 from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class ClientRole(str, Enum):
     MAIN = "MAIN"
@@ -23,13 +23,13 @@ class IBKRSettings(BaseSettings):
 class TelegramSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
     enabled: bool = Field(False, alias="TELEGRAM_ENABLED")
-    bot_token: Optional[SecretStr] = Field(None, alias="TELEGRAM_BOT_TOKEN")
-    chat_control: Optional[int] = Field(None, alias="TG_CHAT_CONTROL")
+    bot_token: SecretStr | None = Field(None, alias="TELEGRAM_BOT_TOKEN")
+    chat_control: int | None = Field(None, alias="TG_CHAT_CONTROL")
     mock: bool = Field(False, alias="TELEGRAM_MOCK")
     timeout_sec: int = Field(20, alias="TELEGRAM_TIMEOUT_SEC")
     long_poll_sec: int = Field(20, alias="TELEGRAM_LONG_POLL_SEC")
     debug: bool = Field(True, alias="TELEGRAM_DEBUG")
-    allowlist: List[int] | str = Field(default_factory=list, alias="TG_ALLOWLIST")
+    allowlist: list[int] | str = Field(default_factory=list, alias="TG_ALLOWLIST")
 
     @field_validator("allowlist", mode="before")
     @classmethod
@@ -45,7 +45,7 @@ class TelegramSettings(BaseSettings):
         # Comma-separated string
         if isinstance(v, str):
             parts = [p.strip() for p in v.split(",") if p.strip()]
-            out: List[int] = []
+            out: list[int] = []
             for p in parts:
                 try:
                     out.append(int(p))
@@ -94,11 +94,11 @@ class AppSettings(BaseSettings):
             return str(self.telegram.bot_token) if self.telegram.bot_token else ""
 
     @property
-    def TG_CHAT_CONTROL(self) -> Optional[int]:  # pragma: no cover
+    def TG_CHAT_CONTROL(self) -> int | None:  # pragma: no cover
         return self.telegram.chat_control
 
     @property
-    def TG_ALLOWLIST(self) -> List[int]:  # pragma: no cover
+    def TG_ALLOWLIST(self) -> list[int]:  # pragma: no cover
         return list(self.telegram.allowlist or [])
 
     @property

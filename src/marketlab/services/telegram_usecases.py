@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from marketlab.ipc import bus
 from marketlab.orders import store as orders

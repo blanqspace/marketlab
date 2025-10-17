@@ -3,7 +3,7 @@ Name: marketlab
 Version: 0.1.0
 Summary: MarketLab - modular trading research sandbox (CLI, modes, adapters)
 Author: blanqspace
-Requires-Python: >=3.11
+Requires-Python: >=3.10
 Description-Content-Type: text/markdown
 Requires-Dist: typer>=0.12
 Requires-Dist: pydantic>=2.7
@@ -11,12 +11,15 @@ Requires-Dist: ib-insync>=0.9
 Requires-Dist: pandas>=2.2
 Requires-Dist: pyarrow>=17.0
 Requires-Dist: requests>=2.32
+Requires-Dist: rich>=13.7
+Requires-Dist: textual>=0.47
 Provides-Extra: dev
+Requires-Dist: black>=24.8; extra == "dev"
+Requires-Dist: bandit>=1.7; extra == "dev"
+Requires-Dist: mypy>=1.10; extra == "dev"
 Requires-Dist: pytest>=8; extra == "dev"
 Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
-Requires-Dist: mypy>=1.10; extra == "dev"
 Requires-Dist: ruff>=0.6; extra == "dev"
-Requires-Dist: black>=24.8; extra == "dev"
 
 
 # MarketLab
@@ -33,6 +36,13 @@ marketlab --help
 marketlab backtest --profile default --symbols AAPL,MSFT --timeframe 15m
 ```
 
+## Runtime via tmux
+- Start: `./tools/tmux_marketlab.sh`
+- Stop (sauber, behält Session): `./tools/stop_all.sh`
+- Neu verbinden: `tmux attach -t marketlab`
+- Logs: `logs/*.log` (Rotation durch `tools/proc_guard.py`)
+- Aktionen erfolgen via CLI/Telegram; keine stdin-Menüs.
+
 ## Steuerung und Dashboard
 
 - Fenster A: Control CLI
@@ -41,18 +51,13 @@ marketlab backtest --profile default --symbols AAPL,MSFT --timeframe 15m
   - Drain (DEV-Test): `python -m marketlab ctl drain --apply`
 
 - Fenster B: Read-only TUI Dashboard
-  - Kein Input, kein screen=True, 1–2 s Aktualisierung
-  - Start: `python -m tools.tui_dashboard`
-  - Zeigt Kopf (State, Heartbeat, UTC), links Orders Top-20, rechts Events (tail)
+  - Keine Eingabe, pollt alle 1 s, `q` beendet, `r` lädt Snapshot neu
+  - Start: `python -m marketlab.tui.dashboard`
+  - Zeigt Kopf (Mode/State/Uptime, Queue, Events/min), links Orders Top-20, rechts Event-Stream
 
 - Worker Daemon
   - Startet den Hintergrund-Worker, der NEW-Kommandos verarbeitet
-  - Start: `python -c "from src.marketlab.daemon.worker import run_forever; run_forever()"`
-
-- Control-Menu (Nummern)
-  - Start: `python -m marketlab control-menu`
-  - Optionen: 1 Pause, 2 Resume, 3 Stop, 4 Confirm(ID), 5 Reject(ID), 6 Mode: Paper, 7 Mode: Live, 9 Exit
-  - Sicherheitsabfrage mit y/n; Ausgabe zeigt erzeugte Command-ID
+  - Start: `python -c "from marketlab.daemon.worker import run_forever; run_forever()"`
 
 ## Environment / Settings
 
@@ -67,8 +72,8 @@ Hinweise:
 
 ### .env laden
 
-- Alle Entry-Points (Supervisor, Worker, Dashboard, Telegram-Poller, Control-Menu) laden `.env` zentral über Pydantic-Settings (`src/marketlab/settings.py`).
-- Optionaler Helfer: `src/marketlab/bootstrap/env.py::load_env(mirror=True)` lädt `Settings()` und spiegelt relevante Keys in `os.environ` zurück (z. B. `IPC_DB`, `TELEGRAM_*`, `TG_*`, `EVENTS_REFRESH_SEC`, `KPIS_REFRESH_SEC`, `DASHBOARD_WARN_ONLY`).
+- Alle Entry-Points (Supervisor, Worker, Dashboard, Telegram-Poller) laden `.env` zentral über Pydantic-Settings (`marketlab.settings`).
+- Optionaler Helfer: `marketlab.bootstrap.env::load_env(mirror=True)` lädt `Settings()` und spiegelt relevante Keys in `os.environ` zurück (z. B. `IPC_DB`, `TELEGRAM_*`, `TG_*`, `EVENTS_REFRESH_SEC`, `KPIS_REFRESH_SEC`, `DASHBOARD_WARN_ONLY`).
 - Beim Start wird eine kompakte Zusammenfassung ausgegeben: `config.summary ...` inkl. maskiertem Bot-Token (`123:****`).
 
 Hinweise zur .env-Datei:
@@ -78,7 +83,7 @@ Hinweise zur .env-Datei:
 
 Diagnose-Beispiele:
 ```
-python -c "from src.marketlab.settings import get_settings as gs; print(gs().model_dump())"
+python -c "from marketlab.settings import get_settings as gs; print(gs().model_dump())"
 python -m tools.tg_poller  # sollte getMe ok und Startbanner senden
 ```
 

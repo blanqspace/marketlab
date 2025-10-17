@@ -1,24 +1,23 @@
+import json
+from pathlib import Path
+
 import typer
-import json, sys
-from .utils.logging import setup_logging
-from .settings import get_settings
-from .utils.signal_handlers import register_signal_handlers
-from .services.telegram_service import telegram_service
+
+from .core.status import snapshot
+from .ipc import bus
+from .modules.scanner_5m import save_signals, scan_symbols
 from .orders.schema import OrderTicket
 from .orders.store import (
-    put_ticket,
-    list_tickets,
-    set_state,
-    get_ticket,
-    resolve_order,
     get_pending,
+    list_tickets,
+    put_ticket,
+    resolve_order,
+    set_state,
 )
-from .core.status import snapshot
-from .modules.scanner_5m import scan_symbols, save_signals
-from datetime import datetime, timezone
-from .ipc import bus
-from pathlib import Path
-import uuid
+from .services.telegram_service import telegram_service
+from .settings import get_settings
+from .utils.logging import setup_logging
+from .utils.signal_handlers import register_signal_handlers
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 
@@ -61,7 +60,6 @@ def verify_data(
     out: str | None = typer.Option(None, "--out"),
 ):
     from .utils.data_validator import validate_dataset
-    from .data.adapters import CSVAdapter
     try:
         syms = [s.strip() for s in symbols.split(",") if s.strip()]
         results = []

@@ -1,8 +1,10 @@
 from __future__ import annotations
-from dataclasses import dataclass, asdict
-from datetime import datetime, timezone, timedelta
+
+import hashlib
+import json
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
-import hashlib, json
 
 ORDER_STATES = {"PENDING","CONFIRMED_TG","CONFIRMED","REJECTED","CANCELED","EXECUTED"}
 

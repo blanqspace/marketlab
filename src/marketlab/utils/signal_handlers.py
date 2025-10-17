@@ -1,5 +1,7 @@
 import signal
+
 from marketlab.core.state_manager import STATE, RunState
+
 
 def register_signal_handlers() -> None:
     def _stop(*_):

@@ -1,6 +1,7 @@
 from __future__ import annotations
+
 from pathlib import Path
-from typing import Dict
+
 import pandas as pd
 
 _REQ = ["time", "open", "high", "low", "close", "volume"]
@@ -18,8 +19,8 @@ def _freq_from_timeframe(tf: str) -> str:
     return "1min"
 
 
-def validate_dataset(path: Path, symbol: str, timeframe: str) -> Dict:
-    out: Dict = {
+def validate_dataset(path: Path, symbol: str, timeframe: str) -> dict:
+    out: dict = {
         "symbol": symbol,
         "timeframe": timeframe,
         "rows": 0,

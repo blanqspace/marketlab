@@ -1,4 +1,6 @@
-import os, logging
+import logging
+import os
+
 from ..data.adapters import IBKRAdapter
 from ..orders.store import list_tickets, set_state
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping, MutableMapping
+from typing import Any
+from collections.abc import Iterable, Mapping, MutableMapping
 from urllib.parse import urljoin, urlparse
 
 import requests

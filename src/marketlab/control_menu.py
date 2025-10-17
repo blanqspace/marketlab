@@ -7,12 +7,20 @@ from __future__ import annotations
 """
 
 import sys
+import warnings
 from typing import Optional
 
 from .ipc import bus
 from .orders import store as orders
 from .settings import get_settings
 from .bootstrap.env import load_env
+
+# Marked for deprecation in favour of the Textual TUI dashboard/CLI flows.
+warnings.warn(
+    "marketlab.control_menu is deprecated; prefer the Textual dashboard or CLI commands.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 # Ensure .env is loaded early (no-op if already cached)
 try:

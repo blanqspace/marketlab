@@ -4,10 +4,13 @@ ib-insync>=0.9
 pandas>=2.2
 pyarrow>=17.0
 requests>=2.32
+rich>=13.7
+textual>=0.47
 
 [dev]
+black>=24.8
+bandit>=1.7
+mypy>=1.10
 pytest>=8
 pytest-asyncio>=0.23
-mypy>=1.10
 ruff>=0.6
-black>=24.8

@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import os
 
 from marketlab.settings import AppSettings, get_settings
 
 
-def _mask_token(tok: Optional[str]) -> str:
+def _mask_token(tok: str | None) -> str:
     if not tok:
         return "-"
     try:
@@ -20,7 +18,7 @@ def _mask_token(tok: Optional[str]) -> str:
         return "-"
 
 
-def load_env(mirror: bool = True, settings: Optional[AppSettings] = None) -> AppSettings:
+def load_env(mirror: bool = True, settings: AppSettings | None = None) -> AppSettings:
     """Ensure .env is loaded via Settings() and optionally mirror key values into os.environ.
 
     - Always returns the resolved AppSettings instance.

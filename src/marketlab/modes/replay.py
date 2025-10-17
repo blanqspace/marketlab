@@ -1,4 +1,6 @@
-import logging, time
+import logging
+import time
+
 from ..data.adapters import CSVAdapter
 from ..orders.store import list_tickets, set_state
 

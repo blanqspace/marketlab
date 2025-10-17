@@ -3,13 +3,13 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, Tuple
+from typing import Any
 
+from marketlab.bootstrap.env import load_env
+from marketlab.core.timefmt import iso_utc
 from marketlab.ipc import bus
 from marketlab.orders import store as orders
 from marketlab.settings import get_settings
-from marketlab.bootstrap.env import load_env
-from marketlab.core.timefmt import iso_utc
 
 
 @dataclass
@@ -42,7 +42,7 @@ class Worker:
     def __init__(self, cfg: WorkerConfig | None = None) -> None:
         self.cfg = cfg or load_config()
         # approvals[(cmd, order_id)] -> (first_source, ts)
-        self._approvals: Dict[Tuple[str, str], Tuple[str, float]] = {}
+        self._approvals: dict[tuple[str, str], tuple[str, float]] = {}
 
     def process_one(self) -> bool:
         cmd = bus.next_new()
