@@ -30,4 +30,3 @@ def test_parse_confirm_token_enqueues(tmp_path, monkeypatch):
         assert args.get("token") == "ABC7QK"
     finally:
         con.close()
-

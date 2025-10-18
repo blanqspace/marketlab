@@ -36,4 +36,3 @@ def test_pause_resume_mode_sets_and_emits(tmp_path):
     assert bus.get_state("mode", "-") == "paper"
     ev = bus.tail_events(1)[0]
     assert ev.message == "mode.enter"
-

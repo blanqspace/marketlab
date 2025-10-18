@@ -19,4 +19,3 @@ def test_statusline_contains_health_and_queue(tmp_path):
     line = _statusline(db, None, None)
     assert "Health=" in line
     assert "QueueDepth=" in line
-

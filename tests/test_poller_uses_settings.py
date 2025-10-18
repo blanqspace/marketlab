@@ -39,10 +39,12 @@ def test_poller_uses_settings_not_osenv(monkeypatch):
 
     # Monkeypatch settings getter used by bootstrap and poller
     import marketlab.settings as settings_mod
+
     monkeypatch.setattr(settings_mod, "get_settings", lambda: app, raising=True)
 
     # Import poller fresh
     import tools.tg_poller as poller
+
     importlib.reload(poller)
 
     # Fake network
@@ -62,4 +64,3 @@ def test_poller_uses_settings_not_osenv(monkeypatch):
     # Should respect Settings() (enabled=True) and return 0 in once-mode
     rc = poller.main(once=True)
     assert rc == 0
-

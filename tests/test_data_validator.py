@@ -45,4 +45,3 @@ def test_validator_fail_on_schema(tmp_path):
     _write_csv(fp, rows)
     res = validate_dataset(fp, "AAPL", "15m")
     assert res["status"] == "fail"
-

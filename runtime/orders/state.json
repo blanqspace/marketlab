@@ -7,7 +7,7 @@
     "type": "MARKET",
     "state": "PENDING",
     "created_at": "2024-01-01T00:00:00+00:00",
-    "token": "LV8GJQ"
+    "token": "L6VAZD"
   },
   "id2": {
     "id": "id2",
@@ -18,80 +18,5 @@
     "state": "PENDING",
     "created_at": "2024-01-01T00:00:00+00:00",
     "token": "ABCDEF"
-  },
-  "80bee626e6514238af7f92c4f2802aa4": {
-    "id": "80bee626e6514238af7f92c4f2802aa4",
-    "symbol": "AAPL",
-    "side": "BUY",
-    "qty": 1.0,
-    "type": "MARKET",
-    "limit": null,
-    "sl": null,
-    "tp": null,
-    "created_at": "2025-10-12T01:40:43.359212+00:00",
-    "expires_at": "2025-10-12T01:42:43.359212+00:00",
-    "state": "PENDING",
-    "checksum": "fcc166cbe4c5c26d9913f633565146858c5513758746e725f16352bf5cc792a6",
-    "token": "HWHSEM"
-  },
-  "8647ade3c2e74e10aee656c8a8b80f3e": {
-    "id": "8647ade3c2e74e10aee656c8a8b80f3e",
-    "symbol": "MSFT",
-    "side": "SELL",
-    "qty": 2.0,
-    "type": "LIMIT",
-    "limit": 100.0,
-    "sl": null,
-    "tp": null,
-    "created_at": "2025-10-12T01:40:43.361028+00:00",
-    "expires_at": "2025-10-12T01:43:43.361028+00:00",
-    "state": "PENDING",
-    "checksum": "21892cb119d43fd7b961d03d46e535a0940cb3b395e8062ad84f1b8fa2ab6018",
-    "token": "KHYQZ6"
-  },
-  "bec4616cfcef4e3285165d0e7b8aba73": {
-    "id": "bec4616cfcef4e3285165d0e7b8aba73",
-    "symbol": "TSLA",
-    "side": "BUY",
-    "qty": 1.0,
-    "type": "MARKET",
-    "limit": null,
-    "sl": null,
-    "tp": null,
-    "created_at": "2025-10-12T01:40:43.362609+00:00",
-    "expires_at": "2025-10-12T01:41:43.362609+00:00",
-    "state": "CONFIRMED",
-    "checksum": "dd6bf26bfc2fe436412ab17c5d9ef52c2fae0b5164a51d09fcdf2a7b5d0818d6",
-    "token": "AWA8J7"
-  },
-  "b33a432f2bdf4dfe9706e1e72039f6a2": {
-    "id": "b33a432f2bdf4dfe9706e1e72039f6a2",
-    "symbol": "GOOG",
-    "side": "SELL",
-    "qty": 1.0,
-    "type": "MARKET",
-    "limit": null,
-    "sl": null,
-    "tp": null,
-    "created_at": "2025-10-12T01:40:43.366811+00:00",
-    "expires_at": "2025-10-12T01:41:43.366811+00:00",
-    "state": "REJECTED",
-    "checksum": "46e45c3d51a961855e6c292ebe85bd5221cb2a92b0b3793f3a2e03f682df668c",
-    "token": "Z9WJ2J"
-  },
-  "d858e3e4057f4de482c0b774c714df60": {
-    "id": "d858e3e4057f4de482c0b774c714df60",
-    "symbol": "AAPL",
-    "side": "BUY",
-    "qty": 1.0,
-    "type": "MARKET",
-    "limit": null,
-    "sl": null,
-    "tp": null,
-    "created_at": "2025-10-12T01:40:43.791567+00:00",
-    "expires_at": "2025-10-12T01:45:43.791567+00:00",
-    "state": "PENDING",
-    "checksum": "8190b2925c5b4fb6a3a39beefed4dcebecc4191a8d7c3ac9e659dd889c9183ad",
-    "token": "HVB3GE"
   }
 }

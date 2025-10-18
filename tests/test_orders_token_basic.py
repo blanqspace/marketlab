@@ -15,6 +15,7 @@ def test_new_token_charset_and_uniqueness():
 def test_assign_missing_tokens_backfills(tmp_path, monkeypatch):
     # simulate store index with missing tokens
     from marketlab.orders import store
+
     monkeypatch.setenv("ENV_MODE", "TEST")
     store._ensure()
     idx = {}
@@ -43,4 +44,3 @@ def test_assign_missing_tokens_backfills(tmp_path, monkeypatch):
     idx2 = load_index()
     assert idx2["id1"].get("token")
     assert idx2["id2"].get("token") == "ABCDEF"
-

@@ -6,6 +6,7 @@ import os
 
 def _reload_settings():
     import marketlab.settings as s
+
     importlib.reload(s)
     return s
 
@@ -19,6 +20,7 @@ def test_poller_requires_token(monkeypatch):
     _reload_settings()
 
     import tools.tg_poller as poller
+
     importlib.reload(poller)
     rc = poller.main(once=True)
     assert rc != 0
@@ -34,6 +36,7 @@ def test_poller_starts_with_complete_env(monkeypatch):
 
     # monkeypatch network to avoid real calls
     import tools.tg_poller as poller
+
     importlib.reload(poller)
 
     class _R:
@@ -57,4 +60,3 @@ def test_poller_starts_with_complete_env(monkeypatch):
 
     rc = poller.main(once=True)
     assert rc == 0
-

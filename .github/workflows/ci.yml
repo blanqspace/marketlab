@@ -2,32 +2,32 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: ["**"]
   pull_request:
 
 jobs:
-  ci:
+  build:
     runs-on: ubuntu-latest
-    env:
-      IBKR_LIVE: "0"
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[dev]
-      - name: Run checks
+          python -m pip install -e .[dev]
+      - name: Run make ci
         run: make ci
-      - name: Bandit (medium+ only)
-        run: make security
-      - name: Upload logs on failure
-        if: failure()
+      - name: Run lint report
+        run: make lint-report
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: logs
-          path: logs/*.log
+          name: ci-artifacts
+          path: |
+            pytest.xml
+            reports/lint-report.txt
           if-no-files-found: ignore

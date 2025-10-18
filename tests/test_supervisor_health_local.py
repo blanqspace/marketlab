@@ -29,4 +29,3 @@ def test_health_ping_ok_with_local_worker(tmp_path, monkeypatch):
     assert res["status"] in ("DONE", "NEW", "ERROR")
     # In CI this should become DONE thanks to drain thread
     assert res["ok"] in (True, False)
-

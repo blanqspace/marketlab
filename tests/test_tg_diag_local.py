@@ -23,6 +23,7 @@ def test_getme_ok(monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:abcxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 
     import tools.tg_diag as diag
+
     importlib.reload(diag)
 
     def fake_get(url, **kw):
@@ -37,6 +38,7 @@ def test_getme_fail(monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:abcxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 
     import tools.tg_diag as diag
+
     importlib.reload(diag)
 
     def fake_get(url, **kw):
@@ -50,6 +52,7 @@ def test_send_variants(monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:abcxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 
     import tools.tg_diag as diag
+
     importlib.reload(diag)
 
     def fake_post(url, json=None, **kw):
@@ -67,6 +70,7 @@ def test_updates_parse(monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:abcxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 
     import tools.tg_diag as diag
+
     importlib.reload(diag)
 
     body = {
@@ -82,4 +86,3 @@ def test_updates_parse(monkeypatch):
 
     monkeypatch.setattr(diag.requests, "post", fake_post)
     assert diag.cmd_updates(2) == 0
-

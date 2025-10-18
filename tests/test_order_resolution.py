@@ -20,4 +20,3 @@ def test_resolve_order_by_token_and_index():
 def test_control_menu_parse_selector():
     assert _parse_selector("1") == 1
     assert _parse_selector("ABC7QK") == "ABC7QK"
-

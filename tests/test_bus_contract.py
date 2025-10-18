@@ -48,16 +48,19 @@ def test_ttl_and_available_at(tmp_path):
 
 def test_concurrency_busy(tmp_path):
     import threading, time as _t
+
     db = with_tmp_db(tmp_path)
     # Hold a transaction to simulate busy briefly, then release in background
     con = sqlite3.connect(str(db), timeout=0.1, check_same_thread=False)
     con.execute("BEGIN IMMEDIATE")
+
     def release():
         _t.sleep(0.2)
         try:
             con.rollback()
         except Exception:
             pass
+
     threading.Thread(target=release, daemon=True).start()
     # enqueue should wait and then succeed
     cid = bus.enqueue("x", {}, source="cli")

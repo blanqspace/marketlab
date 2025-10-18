@@ -17,4 +17,3 @@ def test_render_no_print_and_screen_false():
     assert r is not None
     # ensure render() did not print to stdout
     assert buf.getvalue() == ""
-

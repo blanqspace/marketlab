@@ -28,10 +28,18 @@ class IBKRAdapter:
         self._ib = None
         self._state: _ConnectionState | None = None
 
-    def connect(self, host: str, port: int, *, client_id: int, timeout_sec: int) -> "IBKRAdapter":
+    def connect(
+        self,
+        host: str,
+        port: int,
+        *,
+        client_id: int,
+        timeout_sec: int,
+        readonly: bool = True,
+    ) -> "IBKRAdapter":
         ib_class = _load_ib_class()
         self._ib = ib_class()
-        self._ib.connect(host, port, clientId=client_id, timeout=timeout_sec)
+        self._ib.connect(host, port, clientId=client_id, timeout=timeout_sec, readonly=readonly)
         try:
             self._ib.reqMarketDataType(3)
         except Exception:

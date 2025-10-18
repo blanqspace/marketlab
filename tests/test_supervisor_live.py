@@ -11,4 +11,3 @@ def test_menu_render_message(tmp_path):
     console.print(panel)
     txt = console.export_text()
     assert "OK: state.resume" in txt
-

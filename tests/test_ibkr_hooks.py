@@ -15,15 +15,17 @@ def test_ibkr_connect_disconnect_state(monkeypatch, tmp_path):
 
     # Stub ib_insync.IB
     class _StubIB:
-        def connect(self, host, port, clientId, timeout):
+        def connect(self, host, port, clientId, timeout, readonly=True):
             self._ok = True
+
         def reqMarketDataType(self, t):
             pass
+
         def disconnect(self):
             pass
 
     mod = types.SimpleNamespace(IB=_StubIB)
-    monkeypatch.setitem(sys.modules, 'ib_insync', mod)  # type: ignore[name-defined]
+    monkeypatch.setitem(sys.modules, "ib_insync", mod)  # type: ignore[name-defined]
 
     a = IBKRAdapter()
     a.connect("127.0.0.1", 4002, client_id=7, timeout_sec=1)

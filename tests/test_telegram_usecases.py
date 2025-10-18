@@ -14,6 +14,7 @@ def test_handle_callback_confirm_reject_n(tmp_path):
     setup_tmp_db(tmp_path)
     # With token-based callback
     from marketlab.orders import store as _orders
+
     tok = _orders.get_pending(limit=1)[0]["token"]
     handle_callback({"action": "confirm_token", "token": tok})
     cmd = bus.next_new()

@@ -200,6 +200,28 @@ class Worker:
             return None
 
 
+def maybe_connect_ibkr(settings: Any) -> bool:
+    """Attempt a short-lived connection to IBKR when enabled."""
+    try:
+        ibkr_cfg = getattr(settings, "ibkr", None)
+        if not ibkr_cfg or not getattr(ibkr_cfg, "enabled", False):
+            return False
+        from marketlab.data.adapters import IBKRAdapter
+
+        adapter = IBKRAdapter()
+        adapter.connect(
+            host=getattr(ibkr_cfg, "host", "127.0.0.1"),
+            port=int(getattr(ibkr_cfg, "port", 4002)),
+            client_id=int(getattr(ibkr_cfg, "client_id", 7)),
+            timeout_sec=3,
+            readonly=True,
+        )
+        adapter.disconnect()
+        return True
+    except Exception:
+        return False
+
+
 def run_forever(poll_interval: float = 0.5) -> None:  # pragma: no cover
     # ensure a unified DB path from settings and mirror env for legacy code
     s = load_env(mirror=True)
@@ -219,20 +241,7 @@ def run_forever(poll_interval: float = 0.5) -> None:  # pragma: no cover
     bus.emit("info", "worker.start", ipc_db=s.ipc_db, pid=pid, start_ts=start_ts)
     # Optional: dry IBKR connectivity check
     try:
-        if bool(getattr(getattr(s, "ibkr", object()), "enabled", False)):
-            from marketlab.data.adapters import IBKRAdapter
-
-            try:
-                a = IBKRAdapter()
-                a.connect(
-                    host=getattr(s.ibkr, "host", "127.0.0.1"),
-                    port=int(getattr(s.ibkr, "port", 4002)),
-                    client_id=int(getattr(s.ibkr, "client_id", 7)),
-                    timeout_sec=3,
-                )
-                a.disconnect()
-            except Exception:
-                pass
+        maybe_connect_ibkr(s)
     except Exception:
         pass
     w = Worker()

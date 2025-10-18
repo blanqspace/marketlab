@@ -18,4 +18,3 @@ def test_two_man_rule_flags(tmp_path):
     got = bus.next_new()
     assert got is not None
     bus.mark_done(got.cmd_id)
-

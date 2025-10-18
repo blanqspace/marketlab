@@ -27,9 +27,11 @@ def test_events_tail_aggregation(tmp_path):
     # find the aggregated entry
     found = None
     for e in ag:
-        if e.get("message") == "orders.confirm.pending" and (e.get("fields") or {}).get("token") == "XYZ123":
+        if (
+            e.get("message") == "orders.confirm.pending"
+            and (e.get("fields") or {}).get("token") == "XYZ123"
+        ):
             found = e
             break
     assert found is not None
     assert int(found.get("count", 0)) >= 8
-

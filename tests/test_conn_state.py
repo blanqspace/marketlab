@@ -8,6 +8,7 @@ from marketlab.utils.timefmt import fmt_mm_ss
 def test_set_get_state_roundtrip(tmp_path):
     db = str(tmp_path / "ctl.db")
     import os
+
     os.environ[bus.DB_ENV] = db
     bus.bus_init()
 

@@ -36,4 +36,3 @@ def test_token_uniqueness_and_resolve(tmp_path, monkeypatch):
     # resolve by id
     via_id = store.resolve_order(ids[0])
     assert via_id.get("id") == ids[0]
-

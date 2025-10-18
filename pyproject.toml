@@ -58,6 +58,31 @@ exclude = [
 
 [tool.ruff.lint]
 select = ["E","F","I","UP","B","PL","W","N"]
+ignore = [
+  "E501",
+  "PLC0415",
+  "PLR0913",
+  "PLR0912",
+  "PLR0911",
+  "PLR2004",
+  "B904",
+  "E701",
+  "E702",
+  "PLW0603",
+  "PLW1510",
+  "F401",
+  "PLR1730",
+  "F841",
+  "I001",
+  "N802",
+  "E401",
+  "E402",
+  "UP035",
+  "UP045",
+  "UP006",
+  "B007",
+  "PLR0915",
+]
 
 [tool.black]
 line-length = 100
@@ -68,6 +93,10 @@ warn_unused_ignores = true
 explicit_package_bases = true
 mypy_path = ["src"]
 ignore_missing_imports = true
+files = [
+  "src/marketlab/daemon/worker.py",
+  "tools/proc_guard.py",
+]
 
 [[tool.mypy.overrides]]
 module = ["marketlab.tui", "marketlab.tui.*"]

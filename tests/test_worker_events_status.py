@@ -43,4 +43,3 @@ def test_state_and_mode_events(tmp_path):
     assert ev.message == "mode.enter"
     assert ev.level == "info"
     assert ev.fields.get("mode") == "paper"
-

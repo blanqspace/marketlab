@@ -37,4 +37,3 @@ def test_telegram_buttons_and_callbacks(tmp_path):
     assert cmd2 is not None
     assert cmd2.cmd == "orders.reject"
     bus.mark_done(cmd2.cmd_id)
-

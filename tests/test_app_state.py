@@ -15,4 +15,3 @@ def test_set_get_state_roundtrip(tmp_path):
 
     assert bus.get_state("state", "INIT") == "running"
     assert bus.get_state("mode", "-") == "paper"
-

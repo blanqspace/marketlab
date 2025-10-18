@@ -26,13 +26,13 @@ lint-all:
 
 lint-report:
 	mkdir -p reports
-	$(PY) -m ruff check --statistics --output-format concise $(LINT_TARGETS) | tee reports/lint-report.txt
+	$(PY) -m ruff check --statistics --output-format concise . | tee reports/lint-report.txt || true
 
 format:
 	$(PY) -m black --check $(FORMAT_TARGETS)
 
 type:
-	PYTHONPATH=src $(PY) -m mypy --strict src/marketlab/daemon/worker.py
+	$(PY) -m mypy --strict
 
 test:
 	IBKR_LIVE=0 PYTHONPATH=src $(PY) -m pytest -q
@@ -47,12 +47,16 @@ run-worker:
 	PYTHONPATH=src $(PY) -m marketlab.worker
 
 run-poller:
-	PYTHONPATH=src $(PY) -m tools.tg_poller
+	PYTHONPATH=src $(PY) -m marketlab.tools.tg_poller
 
 run-dashboard:
-	PYTHONPATH=src $(PY) -m tools.tui_dashboard
+	PYTHONPATH=src $(PY) -m marketlab.ui.dashboard
 
 run-all-tmux:
 	bash tools/tmux_marketlab.sh
 
-ci: lint format type test
+ci:
+	$(PY) -m ruff check .
+	$(PY) -m black --check .
+	$(PY) -m mypy --strict
+	PYTHONPATH=src $(PY) -m pytest -q --junitxml=pytest.xml

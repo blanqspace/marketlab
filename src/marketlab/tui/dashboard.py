@@ -187,7 +187,7 @@ class DashboardApp(App[None]):
         self._events.show_message(message, style="red")
 
     async def action_quit(self) -> None:
-        await self.shutdown()
+        self.exit(result=0)
 
     async def action_refresh(self) -> None:
         self._needs_snapshot = True

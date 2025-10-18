@@ -77,4 +77,3 @@ def test_orders_summary_kpis(tmp_path, monkeypatch):
     assert summ["rejected"] >= 1
     assert isinstance(summ["avg_ttl_left"], float)
     assert isinstance(summ["two_man_pending_count"], int)
-

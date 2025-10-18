@@ -36,9 +36,11 @@ def test_bootstrap_load_env_mirrors_keys(monkeypatch):
 
     # Patch get_settings used by bootstrap
     import marketlab.settings as settings_mod
+
     monkeypatch.setattr(settings_mod, "get_settings", lambda: app, raising=True)
 
     import marketlab.bootstrap.env as bootstrap
+
     importlib.reload(bootstrap)
 
     # Call loader
@@ -57,4 +59,3 @@ def test_bootstrap_load_env_mirrors_keys(monkeypatch):
     assert os.getenv("TG_ALLOWLIST") == "1,2,3"
     assert os.getenv("TELEGRAM_TIMEOUT_SEC") == "30"
     assert os.getenv("TELEGRAM_DEBUG") == "1"
-

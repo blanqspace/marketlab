@@ -5,6 +5,7 @@ import importlib
 
 def _reload_settings():
     import marketlab.settings as s
+
     importlib.reload(s)
     return s
 
@@ -30,4 +31,3 @@ def test_settings_reads_env(monkeypatch):
     assert app.telegram.allowlist == [1, 2, 3]
     assert int(app.events_refresh_sec) in (9,)
     assert int(app.kpis_refresh_sec) in (19,)
-

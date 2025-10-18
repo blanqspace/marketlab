@@ -41,4 +41,3 @@ def test_emit_and_tail_events(tmp_path):
     # our bus stores message and fields
     assert hasattr(ev, "message")
     assert isinstance(ev.fields, dict)
-
