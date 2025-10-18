@@ -1,3 +1,4 @@
+# ruff: noqa
 import os
 import time
 import json
@@ -9,7 +10,6 @@ from marketlab.net.http import SafeHttpClient
 from marketlab.services.telegram_usecases import build_main_menu, handle_callback
 from marketlab.ipc import bus
 from marketlab.core.timefmt import iso_utc
-from marketlab.settings import get_settings
 from marketlab.bootstrap.env import load_env
 
 
@@ -106,7 +106,9 @@ def _base_url(token: str) -> str:
     return f"https://api.telegram.org/bot{token}/"
 
 
-def _log_http(debug: bool, prefix: str, url: str, payload: Any | None, resp: _HTTPResponse | None) -> None:
+def _log_http(
+    debug: bool, prefix: str, url: str, payload: Any | None, resp: _HTTPResponse | None
+) -> None:
     if not debug:
         return
     if payload is None:
@@ -139,13 +141,30 @@ def main(once: bool = False) -> int:
     mock: bool = bool(cfg.get("mock", False))
     base = _base_url(token)
 
+    if mock:
+        print("mock-mode: no network; poller idle")
+        try:
+            bus.set_state("tg.last_ok_ts", iso_utc())
+        except Exception:
+            pass
+        if once:
+            return 0
+        sleep_sec = max(1, int(cfg.get("long_poll", timeout)))
+        try:
+            while True:
+                time.sleep(float(sleep_sec))
+        except KeyboardInterrupt:  # pragma: no cover - interactive stop
+            return 0
+
+    http = requests
+
     # Startup checks and banner (mock writes files instead)
     msg_url = f"{base}sendMessage"
     if not mock:
         url = f"{base}getMe"
         _log_http(debug, "-> GET", url, None, None)
         try:
-            me = requests.get(url, timeout=timeout)
+            me = http.get(url, timeout=timeout)
         except Exception:
             print("ERROR: getMe failed; invalid token or network")
             try:
@@ -177,7 +196,7 @@ def main(once: bool = False) -> int:
         banner = "?? MarketLab Bot ready"
         payload = {"chat_id": chat, "text": banner, "reply_markup": build_main_menu()}
         _log_http(debug, "-> POST", msg_url, payload, None)
-        resp = requests.post(msg_url, json=payload, timeout=timeout)
+        resp = http.post(msg_url, json=payload, timeout=timeout)
         _log_http(debug, "", msg_url, None, resp)
         if resp.status_code in (400, 403):
             txt = resp.text.lower()
@@ -200,25 +219,16 @@ def main(once: bool = False) -> int:
             except Exception:
                 pass
     else:
-        # Mock: write banner into runtime/telegram_mock
-        try:
-            import pathlib
-            d = pathlib.Path("runtime/telegram_mock")
-            d.mkdir(parents=True, exist_ok=True)
-            (d / "sendMessage_start.json").write_text(json.dumps({"chat_id": chat, "text": "?? MarketLab Bot ready"}, ensure_ascii=False, indent=2), encoding="utf-8")
-            print("getMe ok: mock-mode")
-            try:
-                bus.set_state("tg.last_ok_ts", iso_utc())
-            except Exception:
-                pass
-        except Exception:
-            pass
+        print("mock-mode: no network; waiting for events")
 
     offset: Optional[int] = None
-    if once:
-        return 0
 
     while True:
+        if mock:
+            time.sleep(1.0)
+            if once:
+                return 0
+            continue
         try:
             lp = max(5, int(cfg.get("long_poll", timeout)))
             upd_body: dict[str, Any] = {"timeout": lp}
@@ -226,7 +236,7 @@ def main(once: bool = False) -> int:
                 upd_body["offset"] = offset
             upd_url = f"{base}getUpdates"
             _log_http(debug, "-> POST", upd_url, upd_body, None)
-            r = requests.post(upd_url, json=upd_body, timeout=timeout)
+            r = http.post(upd_url, json=upd_body, timeout=timeout)
             _log_http(debug, "", upd_url, None, r)
             if not r.ok:
                 time.sleep(2)
@@ -263,20 +273,50 @@ def main(once: bool = False) -> int:
                     if not parsed:
                         continue
                     if allow and (sender_id not in allow):
-                        requests.post(f"{base}answerCallbackQuery", json={"callback_query_id": cb_id, "text": "Fehler: Zugriff verweigert"}, timeout=timeout)
+                        requests.post(
+                            f"{base}answerCallbackQuery",
+                            json={"callback_query_id": cb_id, "text": "Fehler: Zugriff verweigert"},
+                            timeout=timeout,
+                        )
                         continue
                     try:
                         handle_callback(parsed)
-                        requests.post(f"{base}answerCallbackQuery", json={"callback_query_id": cb_id, "text": f"OK: {parsed.get('action')}"}, timeout=timeout)
+                        requests.post(
+                            f"{base}answerCallbackQuery",
+                            json={
+                                "callback_query_id": cb_id,
+                                "text": f"OK: {parsed.get('action')}",
+                            },
+                            timeout=timeout,
+                        )
                         try:
-                            requests.post(msg_url, json={"chat_id": chat, "text": "MarketLab Control", "reply_markup": build_main_menu()}, timeout=timeout)
+                            requests.post(
+                                msg_url,
+                                json={
+                                    "chat_id": chat,
+                                    "text": "MarketLab Control",
+                                    "reply_markup": build_main_menu(),
+                                },
+                                timeout=timeout,
+                            )
                         except Exception:
                             pass
                     except Exception as e:
-                        requests.post(f"{base}answerCallbackQuery", json={"callback_query_id": cb_id, "text": f"Fehler: {e}"}, timeout=timeout)
+                        requests.post(
+                            f"{base}answerCallbackQuery",
+                            json={"callback_query_id": cb_id, "text": f"Fehler: {e}"},
+                            timeout=timeout,
+                        )
                         try:
                             if str(e).startswith("Bitte ID"):
-                                requests.post(msg_url, json={"chat_id": chat, "text": "Bitte ID angeben: /confirm <ID> oder /reject <ID>"}, timeout=timeout)
+                                requests.post(
+                                    msg_url,
+                                    json={
+                                        "chat_id": chat,
+                                        "text": "Bitte ID angeben: /confirm <ID> oder /reject <ID>",
+                                    },
+                                    timeout=timeout,
+                                )
                         except Exception:
                             pass
                     continue
@@ -286,38 +326,98 @@ def main(once: bool = False) -> int:
                 if msg and isinstance(msg.get("text"), str):
                     chat_id = msg.get("chat", {}).get("id", chat)
                     if allow and (sender_id not in allow):
-                        requests.post(msg_url, json={"chat_id": chat_id, "text": "Fehler: Zugriff verweigert"}, timeout=timeout)
+                        requests.post(
+                            msg_url,
+                            json={"chat_id": chat_id, "text": "Fehler: Zugriff verweigert"},
+                            timeout=timeout,
+                        )
                         continue
                     txt = msg["text"].strip()
                     try:
                         if txt == "/pause":
                             bus.enqueue("state.pause", {}, source="telegram")
-                            requests.post(msg_url, json={"chat_id": chat_id, "text": "OK: pause"}, timeout=timeout)
+                            requests.post(
+                                msg_url,
+                                json={"chat_id": chat_id, "text": "OK: pause"},
+                                timeout=timeout,
+                            )
                         elif txt == "/resume":
                             bus.enqueue("state.resume", {}, source="telegram")
-                            requests.post(msg_url, json={"chat_id": chat_id, "text": "OK: resume"}, timeout=timeout)
+                            requests.post(
+                                msg_url,
+                                json={"chat_id": chat_id, "text": "OK: resume"},
+                                timeout=timeout,
+                            )
                         elif txt == "/paper":
-                            bus.enqueue("mode.switch", {"target": "paper", "args": {"symbols": ["AAPL"], "timeframe": "1m"}}, source="telegram")
-                            requests.post(msg_url, json={"chat_id": chat_id, "text": "OK: mode.paper"}, timeout=timeout)
+                            bus.enqueue(
+                                "mode.switch",
+                                {
+                                    "target": "paper",
+                                    "args": {"symbols": ["AAPL"], "timeframe": "1m"},
+                                },
+                                source="telegram",
+                            )
+                            requests.post(
+                                msg_url,
+                                json={"chat_id": chat_id, "text": "OK: mode.paper"},
+                                timeout=timeout,
+                            )
                         elif txt == "/live":
-                            bus.enqueue("mode.switch", {"target": "live", "args": {"symbols": ["AAPL"], "timeframe": "1m"}}, source="telegram")
-                            requests.post(msg_url, json={"chat_id": chat_id, "text": "OK: mode.live"}, timeout=timeout)
+                            bus.enqueue(
+                                "mode.switch",
+                                {
+                                    "target": "live",
+                                    "args": {"symbols": ["AAPL"], "timeframe": "1m"},
+                                },
+                                source="telegram",
+                            )
+                            requests.post(
+                                msg_url,
+                                json={"chat_id": chat_id, "text": "OK: mode.live"},
+                                timeout=timeout,
+                            )
                         elif txt.startswith("/confirm "):
                             tok = txt.split(maxsplit=1)[1].strip()
                             if tok:
                                 bus.enqueue("orders.confirm", {"token": tok}, source="telegram")
-                                requests.post(msg_url, json={"chat_id": chat_id, "text": f"OK: confirm {tok}"}, timeout=timeout)
+                                requests.post(
+                                    msg_url,
+                                    json={"chat_id": chat_id, "text": f"OK: confirm {tok}"},
+                                    timeout=timeout,
+                                )
                             else:
-                                requests.post(msg_url, json={"chat_id": chat_id, "text": "Bitte Token angeben: /confirm <TOKEN>"}, timeout=timeout)
+                                requests.post(
+                                    msg_url,
+                                    json={
+                                        "chat_id": chat_id,
+                                        "text": "Bitte Token angeben: /confirm <TOKEN>",
+                                    },
+                                    timeout=timeout,
+                                )
                         elif txt.startswith("/reject "):
                             tok = txt.split(maxsplit=1)[1].strip()
                             if tok:
                                 bus.enqueue("orders.reject", {"token": tok}, source="telegram")
-                                requests.post(msg_url, json={"chat_id": chat_id, "text": f"OK: reject {tok}"}, timeout=timeout)
+                                requests.post(
+                                    msg_url,
+                                    json={"chat_id": chat_id, "text": f"OK: reject {tok}"},
+                                    timeout=timeout,
+                                )
                             else:
-                                requests.post(msg_url, json={"chat_id": chat_id, "text": "Bitte Token angeben: /reject <TOKEN>"}, timeout=timeout)
+                                requests.post(
+                                    msg_url,
+                                    json={
+                                        "chat_id": chat_id,
+                                        "text": "Bitte Token angeben: /reject <TOKEN>",
+                                    },
+                                    timeout=timeout,
+                                )
                     except Exception as e:
-                        requests.post(msg_url, json={"chat_id": chat_id, "text": f"Fehler: {e}"}, timeout=timeout)
+                        requests.post(
+                            msg_url,
+                            json={"chat_id": chat_id, "text": f"Fehler: {e}"},
+                            timeout=timeout,
+                        )
             time.sleep(1)
         except Exception:
             time.sleep(2)

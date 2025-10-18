@@ -111,7 +111,6 @@ start_pane() {
   if [[ -z "$pid" ]] || ! kill -0 "$pid" 2>/dev/null; then
     printf 'error: pane "%s" failed to start\n' "$label" >&2
     log "pane ${label} failed"
-    tmux kill-session -t "$SESSION" 2>/dev/null || true
     exit 2
   fi
   log "pane ${label} pid=${pid}"

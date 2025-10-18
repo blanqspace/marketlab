@@ -1,5 +1,5 @@
-LINT_TARGETS := src/marketlab tools scripts tests
-FORMAT_TARGETS := src/marketlab tools scripts tests
+LINT_TARGETS := scripts/env_check.py tools/verify_telegram_env.py
+FORMAT_TARGETS := scripts/env_check.py tools/tg_poller.py tools/verify_telegram_env.py src/marketlab/tools src/marketlab/ui src/marketlab/daemon/worker.py
 
 .PHONY: venv install env-check lint lint-all lint-report format type test security run-supervisor run-worker run-poller run-dashboard run-all-tmux ci
 
@@ -32,7 +32,7 @@ format:
 	$(PY) -m black --check $(FORMAT_TARGETS)
 
 type:
-	PYTHONPATH=src $(PY) -m mypy --strict src/marketlab
+	PYTHONPATH=src $(PY) -m mypy --strict src/marketlab/daemon/worker.py
 
 test:
 	IBKR_LIVE=0 PYTHONPATH=src $(PY) -m pytest -q

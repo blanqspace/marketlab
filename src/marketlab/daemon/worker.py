@@ -134,17 +134,33 @@ class Worker:
                 self._approvals[key] = (source, now)
                 # include initial source in sources list
                 init_sources = [source] if source else []
-                bus.emit("warn", "orders.confirm.pending", token=tok, sources=sorted(list(set(init_sources))))
+                bus.emit(
+                    "warn",
+                    "orders.confirm.pending",
+                    token=tok,
+                    sources=sorted(list(set(init_sources))),
+                )
                 return True
             first_source, ts = first
             if source == first_source:
                 # same source repeated
                 rep_sources = [s for s in [first_source, source] if s]
-                bus.emit("warn", "orders.confirm.pending", token=tok, sources=sorted(list(set(rep_sources))), note="same_source")
+                bus.emit(
+                    "warn",
+                    "orders.confirm.pending",
+                    token=tok,
+                    sources=sorted(list(set(rep_sources))),
+                    note="same_source",
+                )
                 return True
             # second approval
             if now - ts <= self.cfg.ttl_seconds:
-                bus.emit("ok", "orders.confirm.ok", token=tok, sources=sorted(list(set([first_source, source]))))
+                bus.emit(
+                    "ok",
+                    "orders.confirm.ok",
+                    token=tok,
+                    sources=sorted(list(set([first_source, source]))),
+                )
                 # clear approval
                 self._approvals.pop(key, None)
                 return True
@@ -205,9 +221,15 @@ def run_forever(poll_interval: float = 0.5) -> None:  # pragma: no cover
     try:
         if bool(getattr(getattr(s, "ibkr", object()), "enabled", False)):
             from marketlab.data.adapters import IBKRAdapter
+
             try:
                 a = IBKRAdapter()
-                a.connect(getattr(s.ibkr, "host", "127.0.0.1"), int(getattr(s.ibkr, "port", 4002)), int(getattr(s.ibkr, "client_id", 7)), timeout_sec=3)
+                a.connect(
+                    host=getattr(s.ibkr, "host", "127.0.0.1"),
+                    port=int(getattr(s.ibkr, "port", 4002)),
+                    client_id=int(getattr(s.ibkr, "client_id", 7)),
+                    timeout_sec=3,
+                )
                 a.disconnect()
             except Exception:
                 pass

@@ -2,17 +2,13 @@ from __future__ import annotations
 
 import os
 import re
-import sys
-from typing import List, Tuple
-
-from marketlab.settings import settings
 
 
-def _parse_allowlist(csv: str | None) -> Tuple[List[int], List[str]]:
+def _parse_allowlist(csv: str | None) -> tuple[list[int], list[str]]:
     if not csv:
         return [], []
-    oks: List[int] = []
-    errs: List[str] = []
+    oks: list[int] = []
+    errs: list[str] = []
     for raw in csv.split(","):
         s = raw.strip()
         if not s:
@@ -31,7 +27,7 @@ def _validate_token(tok: str | None) -> bool:
     return bool(re.match(r"^\d+:[A-Za-z0-9_-]{20,}$", tok))
 
 
-def verify_telegram_env() -> int:
+def verify_telegram_env() -> int:  # noqa: PLR0912
     # Validate against runtime env instead of settings, to match actual process
     enabled = str(os.getenv("TELEGRAM_ENABLED", "")).strip().lower() in ("1", "true")
     mock = str(os.getenv("TELEGRAM_MOCK", "")).strip().lower() in ("1", "true")
@@ -40,7 +36,7 @@ def verify_telegram_env() -> int:
     allow_raw = os.getenv("TG_ALLOWLIST") or ""
     allow_ids, allow_errs = _parse_allowlist(allow_raw)
 
-    errors: List[str] = []
+    errors: list[str] = []
 
     if not enabled:
         print("ERROR: TELEGRAM_ENABLED not true")

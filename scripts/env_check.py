@@ -5,12 +5,14 @@ from __future__ import annotations
 
 from marketlab.bootstrap.env import load_env
 
+TOKEN_PARTS = 2
+
 
 def mask_token(token: str | None) -> str:
     if not token:
         return "-"
     parts = token.split(":", 1)
-    if len(parts) == 2 and parts[0].isdigit():
+    if len(parts) == TOKEN_PARTS and parts[0].isdigit():
         return f"{parts[0]}:****"
     return token[:4] + "****"
 
@@ -26,7 +28,9 @@ def main() -> None:
                 "enabled": bool(telegram.enabled),
                 "mock": bool(telegram.mock),
                 "chat_control": telegram.chat_control,
-                "token": mask_token(telegram.bot_token.get_secret_value() if telegram.bot_token else None),
+                "token": mask_token(
+                    telegram.bot_token.get_secret_value() if telegram.bot_token else None
+                ),
                 "allowlist_count": len(telegram.allowlist or []),
             },
         }
