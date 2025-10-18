@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # ⚙️ Virtuelle Umgebungen
 env/
@@ -26,6 +29,9 @@ venv/
 logs/
 runtime/locks/
 *.lock
+runtime/
+reports/*.txt
+reports/*.log
 
 # 📄 Lokale Reports & Dokumentation
 # summaries/   # kannst du aktivieren, wenn öffentlich
@@ -34,11 +40,8 @@ runtime/locks/
 # 🛠️ Sonstiges
 .DS_Store
 Thumbs.db
+temp_*
+tmp_*
 
 # 📊 Große Datenordner (lokale Market-Daten, nicht versionieren)
 data/
-
-/reports/runs/
-/reports/reco/
-/reports/audit/
-/runtime/

@@ -22,6 +22,7 @@ src/marketlab/daemon/worker.py
 src/marketlab/data/__init__.py
 src/marketlab/data/adapters/__init__.py
 src/marketlab/data/adapters/csv_adapter.py
+src/marketlab/data/adapters/ibkr_adapter.py
 src/marketlab/ipc/bus.py
 src/marketlab/modes/backtest.py
 src/marketlab/modes/control.py
@@ -36,10 +37,14 @@ src/marketlab/orders/store.py
 src/marketlab/services/__init__.py
 src/marketlab/services/telegram_service.py
 src/marketlab/services/telegram_usecases.py
+src/marketlab/tools/__init__.py
+src/marketlab/tools/tg_poller.py
 src/marketlab/tui/__init__.py
 src/marketlab/tui/dashboard.py
 src/marketlab/tui/db.py
 src/marketlab/tui/widgets.py
+src/marketlab/ui/__init__.py
+src/marketlab/ui/dashboard.py
 src/marketlab/utils/data_validator.py
 src/marketlab/utils/logging.py
 src/marketlab/utils/signal_handlers.py

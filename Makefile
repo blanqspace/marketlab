@@ -1,24 +1,58 @@
-.PHONY: install lint format type test security ci
+LINT_TARGETS := src/marketlab tools scripts tests
+FORMAT_TARGETS := src/marketlab tools scripts tests
 
-PYTHON ?= python
+.PHONY: venv install env-check lint lint-all lint-report format type test security run-supervisor run-worker run-poller run-dashboard run-all-tmux ci
 
-install:
-	$(PYTHON) -m pip install --upgrade pip
-	$(PYTHON) -m pip install -e .[dev]
+PYTHON ?= python3
+VENV ?= .venv
+BIN := $(VENV)/bin
+PY := $(if $(wildcard $(BIN)/python),$(BIN)/python,$(PYTHON))
+
+venv:
+	$(PYTHON) -m venv $(VENV)
+
+install: venv
+	$(PY) -m pip install --upgrade pip
+	$(PY) -m pip install -e .[dev]
+
+env-check:
+	PYTHONPATH=src $(PY) scripts/env_check.py
 
 lint:
-	$(PYTHON) -m ruff check .
+	$(PY) -m ruff check $(LINT_TARGETS)
+
+lint-all:
+	$(PY) -m ruff check .
+
+lint-report:
+	mkdir -p reports
+	$(PY) -m ruff check --statistics --output-format concise $(LINT_TARGETS) | tee reports/lint-report.txt
 
 format:
-	$(PYTHON) -m black --check .
+	$(PY) -m black --check $(FORMAT_TARGETS)
 
 type:
-	$(PYTHON) -m mypy marketlab.tui marketlab.worker marketlab.daemon.worker
+	PYTHONPATH=src $(PY) -m mypy --strict src/marketlab
 
 test:
-	IBKR_LIVE=0 $(PYTHON) -m pytest -q
+	IBKR_LIVE=0 PYTHONPATH=src $(PY) -m pytest -q
 
 security:
-	$(PYTHON) -m bandit -q -r src --severity-level medium --confidence-level medium
+	$(PY) -m bandit -q -r src --severity-level medium --confidence-level medium
+
+run-supervisor:
+	PYTHONPATH=src $(PY) -m marketlab.supervisor
+
+run-worker:
+	PYTHONPATH=src $(PY) -m marketlab.worker
+
+run-poller:
+	PYTHONPATH=src $(PY) -m tools.tg_poller
+
+run-dashboard:
+	PYTHONPATH=src $(PY) -m tools.tui_dashboard
+
+run-all-tmux:
+	bash tools/tmux_marketlab.sh
 
 ci: lint format type test
