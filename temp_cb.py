@@ -1,2 +1,0 @@
-from marketlab.services.telegram_service import telegram_service
-telegram_service.handle_callback("ORD:CONFIRM:b98e96a9b5d84ff3a8942c02656455f2")
