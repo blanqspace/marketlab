@@ -2,10 +2,18 @@ from __future__ import annotations
 
 import os
 import time
+from collections import deque
 from dataclasses import dataclass
 from typing import Any
 
 from marketlab.bootstrap.env import load_env
+from marketlab.core.control_policy import (
+    ControlPolicy,
+    approval_window,
+    approvals_required,
+    command_target,
+    policy_for,
+)
 from marketlab.core.timefmt import iso_utc
 from marketlab.ipc import bus
 from marketlab.orders import store as orders
@@ -33,27 +41,46 @@ class Worker:
     """Simple command worker that consumes NEW commands from the bus.
 
     Policies:
-    - Two-man-rule for order confirmations: requires two distinct sources (e.g. telegram and cli).
-      This is tracked in-memory for now. TODO: persist approvals for resilience across restarts.
-    - TTL applies to approval window. TODO: enforce expiry and emit timeout events.
-    - Retries and Dedupe are postponed. TODO markers are in bus layer already.
+    - Policy-driven approvals: applies central risk matrix (two-man rule for HIGH risk) and
+      persists pending approvals in the bus database.
+    - TTL windows expire automatically and emit approval events for observability.
+    - Command retries/backoff handled at bus layer; worker focuses on execution and safety checks.
     """
+
+    BREAKER_THRESHOLD = 5
+    BREAKER_WINDOW = 60
 
     def __init__(self, cfg: WorkerConfig | None = None) -> None:
         self.cfg = cfg or load_config()
-        # approvals[(cmd, order_id)] -> (first_source, ts)
-        self._approvals: dict[tuple[str, str], tuple[str, float]] = {}
+        self._last_prune: float = 0.0
+        self._error_times: deque[int] = deque()
+        self._breaker_tripped: bool = False
+        try:
+            bus.set_state("breaker.state", "ok")
+        except Exception:
+            pass
 
     def process_one(self) -> bool:
         cmd = bus.next_new()
         if not cmd:
+            self._expire_approvals()
             return False
+        self._expire_approvals()
+        args = cmd.args or {}
+        source = cmd.source or "?"
+        policy = policy_for(cmd.cmd)
+        target = self._target_for(cmd.cmd, args)
         try:
-            handled = self._handle(cmd.cmd, cmd.args or {}, cmd.source or "?")
+            allowed, approvers = self._enforce_policy(cmd, target, policy)
+            if not allowed:
+                bus.mark_done(cmd.cmd_id)
+                return True
+            handled = self._execute(cmd.cmd, args, source, approvers)
             bus.mark_done(cmd.cmd_id)
             return handled
         except Exception as e:  # pragma: no cover
             bus.mark_error(cmd.cmd_id, str(e))
+            self._record_error(cmd, e)
             return False
 
     def process_available(self, max_items: int | None = None) -> int:
@@ -71,40 +98,40 @@ class Worker:
         return n
 
     # --- command handlers ---
-    def _handle(self, name: str, args: dict[str, Any], source: str) -> bool:
+    def _execute(
+        self,
+        name: str,
+        args: dict[str, Any],
+        source: str,
+        approvers: list[str] | None = None,
+    ) -> bool:
         match name:
             case "state.pause":
-                # persist lowercase state for dashboard header stability
-                try:
-                    bus.set_state("state", "paused")
-                except Exception:
-                    pass
-                # emit state changed (legacy uppercase for event payload)
-                bus.emit("ok", "state.changed", state="PAUSED")
+                self._apply_pause_state()
                 return True
             case "state.resume":
-                try:
-                    bus.set_state("state", "running")
-                except Exception:
-                    pass
-                bus.emit("ok", "state.changed", state="RUN")
+                self._apply_resume_state()
+                self._reset_breaker()
                 return True
             case "state.stop":
                 bus.emit("ok", "state.changed", state="STOP", source=source)
                 return True
+            case "stop.now":
+                return self._stop_now(source, approvers)
             case "orders.confirm":
-                return self._orders_confirm(args, source)
+                return self._orders_confirm(args, source, approvers)
             case "orders.reject":
                 oid, tok = self._resolve_id_and_token(args)
                 if not oid:
                     bus.emit("error", "orders.reject.failed", reason="missing id", source=source)
                     return False
                 # include sources list for clarity
-                srcs = [source] if source else []
-                bus.emit("ok", "orders.reject.ok", token=tok, sources=sorted(list(set(srcs))))
+                srcs = self._sources_with_fallback(source, approvers)
+                bus.emit("ok", "orders.reject.ok", token=tok, sources=srcs)
                 return True
             case "orders.confirm_all":
-                bus.emit("ok", "orders.confirm_all", source=source)
+                srcs = self._sources_with_fallback(source, approvers)
+                bus.emit("ok", "orders.confirm_all", source=source, approvers=srcs)
                 return True
             case "mode.switch":
                 target = args.get("target")
@@ -120,59 +147,18 @@ class Worker:
                 bus.emit("warn", "unknown.cmd", cmd=name, source=source, args=args)
                 return False
 
-    def _orders_confirm(self, args: dict[str, Any], source: str) -> bool:
+    def _orders_confirm(
+        self,
+        args: dict[str, Any],
+        source: str,
+        approvers: list[str] | None,
+    ) -> bool:
         oid, tok = self._resolve_id_and_token(args)
         if not oid:
             bus.emit("error", "orders.confirm.failed", reason="missing id", source=source)
             return False
-        if self.cfg.two_man_rule:
-            key = ("orders.confirm", oid)
-            now = time.time()
-            first = self._approvals.get(key)
-            if not first:
-                # record first approval
-                self._approvals[key] = (source, now)
-                # include initial source in sources list
-                init_sources = [source] if source else []
-                bus.emit(
-                    "warn",
-                    "orders.confirm.pending",
-                    token=tok,
-                    sources=sorted(list(set(init_sources))),
-                )
-                return True
-            first_source, ts = first
-            if source == first_source:
-                # same source repeated
-                rep_sources = [s for s in [first_source, source] if s]
-                bus.emit(
-                    "warn",
-                    "orders.confirm.pending",
-                    token=tok,
-                    sources=sorted(list(set(rep_sources))),
-                    note="same_source",
-                )
-                return True
-            # second approval
-            if now - ts <= self.cfg.ttl_seconds:
-                bus.emit(
-                    "ok",
-                    "orders.confirm.ok",
-                    token=tok,
-                    sources=sorted(list(set([first_source, source]))),
-                )
-                # clear approval
-                self._approvals.pop(key, None)
-                return True
-            # expired
-            self._approvals.pop(key, None)
-            bus.emit("warn", "orders.confirm.expired", token=tok, source=source)
-            # record new first
-            self._approvals[key] = (source, now)
-            return True
-        # no two-man rule
-        srcs = [source] if source else []
-        bus.emit("ok", "orders.confirm.ok", token=tok, sources=sorted(list(set(srcs))))
+        srcs = self._sources_with_fallback(source, approvers)
+        bus.emit("ok", "orders.confirm.ok", token=tok, sources=srcs)
         return True
 
     def _resolve_id_and_token(self, args: dict[str, Any]) -> tuple[str, str | None]:
@@ -191,6 +177,260 @@ class Worker:
             except Exception:
                 return (str(sel), None) if args.get("id") else ("", None)
         return "", None
+
+    def _sources_with_fallback(self, source: str, approvers: list[str] | None) -> list[str]:
+        candidates = list(approvers or [])
+        if source:
+            candidates.append(source)
+        cleaned = sorted({s for s in candidates if s})
+        return cleaned
+
+    def _apply_pause_state(self) -> None:
+        try:
+            bus.set_state("state", "paused")
+        except Exception:
+            pass
+        bus.emit("ok", "state.changed", state="PAUSED")
+
+    def _apply_resume_state(self) -> None:
+        try:
+            bus.set_state("state", "running")
+        except Exception:
+            pass
+        bus.emit("ok", "state.changed", state="RUN")
+
+    def _stop_now(self, source: str, approvers: list[str] | None) -> bool:
+        self._apply_pause_state()
+        canceled = self._cancel_pending_orders()
+        sources = self._sources_with_fallback(source, approvers)
+        self._breaker_tripped = True
+        self._error_times.clear()
+        try:
+            bus.set_state("breaker.state", "killswitch")
+        except Exception:
+            pass
+        bus.emit(
+            "error",
+            "stop.now",
+            sources=sources,
+            canceled=canceled,
+        )
+        return True
+
+    def _cancel_pending_orders(self) -> int:
+        count = 0
+        for state in ("PENDING", "CONFIRMED_TG"):
+            for rec in orders.list_tickets(state):
+                try:
+                    orders.set_state(rec.get("id"), "CANCELED")
+                    count += 1
+                except Exception:
+                    continue
+        return count
+
+    def _record_error(self, command: bus.Command, exc: Exception) -> None:
+        now = int(time.time())
+        self._error_times.append(now)
+        window_start = now - self.BREAKER_WINDOW
+        while self._error_times and self._error_times[0] < window_start:
+            self._error_times.popleft()
+        if self._breaker_tripped:
+            return
+        if len(self._error_times) >= self.BREAKER_THRESHOLD:
+            self._trip_breaker(command, len(self._error_times))
+
+    def _trip_breaker(self, command: bus.Command, count: int) -> None:
+        if self._breaker_tripped:
+            return
+        self._breaker_tripped = True
+        self._apply_pause_state()
+        try:
+            bus.set_state("breaker.state", "tripped")
+        except Exception:
+            pass
+        bus.emit(
+            "error",
+            "breaker.tripped",
+            cmd=command.cmd,
+            cmd_id=command.cmd_id,
+            risk=command.risk_level,
+            count=count,
+            window=self.BREAKER_WINDOW,
+        )
+
+    def _reset_breaker(self) -> None:
+        if not self._breaker_tripped and not self._error_times:
+            return
+        self._breaker_tripped = False
+        self._error_times.clear()
+        try:
+            bus.set_state("breaker.state", "ok")
+        except Exception:
+            pass
+        bus.emit("info", "breaker.reset")
+
+    def _target_for(self, cmd: str, args: dict[str, Any]) -> str:
+        target = command_target(cmd, args)
+        if cmd == "stop.now":
+            return "stop"
+        return target
+
+    def _approval_id(self, command: bus.Command, target: str) -> str:
+        if approvals_required(command.cmd) > 1:
+            base = target or command.cmd_id
+            return f"{command.cmd}:{base}"
+        if command.request_id:
+            return command.request_id
+        base = target or command.cmd_id
+        return f"{command.cmd}:{base}"
+
+    def _enforce_policy(
+        self,
+        command: bus.Command,
+        target: str,
+        policy: ControlPolicy,
+    ) -> tuple[bool, list[str]]:
+        source = command.source or "?"
+        required = max(1, approvals_required(command.cmd))
+        if not self.cfg.two_man_rule or required <= 1:
+            return True, self._sources_with_fallback(source, None)
+
+        now = int(time.time())
+        window = max(5, approval_window(command.cmd))
+        approval_id = self._approval_id(command, target)
+        record = bus.get_approval(approval_id)
+
+        if record and record["expires_at"] <= now:
+            bus.delete_approval(approval_id)
+            bus.emit(
+                "warn",
+                "approval.expired",
+                approval_id=approval_id,
+                cmd=command.cmd,
+                target=target,
+                risk=policy.risk,
+            )
+            if command.cmd == "orders.confirm":
+                bus.emit("warn", "orders.confirm.expired", token=target)
+            record = None
+
+        entry = {
+            "source": source,
+            "actor_id": command.actor_id,
+            "ts": now,
+            "cmd_id": command.cmd_id,
+        }
+        if command.request_id:
+            entry["request_id"] = command.request_id
+
+        if record is None:
+            requested_at = command.created_at or now
+            record = {
+                "approval_id": approval_id,
+                "cmd": command.cmd,
+                "target": target,
+                "risk_level": policy.risk,
+                "required": required,
+                "approvals": [entry],
+                "requested_at": requested_at,
+                "expires_at": requested_at + window,
+                "last_update": now,
+            }
+            bus.put_approval(record)
+            sources = self._sources_with_fallback(source, None)
+            bus.emit(
+                "warn",
+                "approval.pending",
+                approval_id=approval_id,
+                cmd=command.cmd,
+                target=target,
+                risk=policy.risk,
+                approvals=len(sources),
+                required=required,
+                sources=sources,
+            )
+            if command.cmd == "orders.confirm":
+                bus.emit("warn", "orders.confirm.pending", token=target, sources=sources)
+            return (False, sources)
+
+        sources = [a.get("source") for a in record.get("approvals", []) if a.get("source")]
+        unique_sources = set(sources)
+        if source in unique_sources:
+            record["last_update"] = now
+            bus.put_approval(record)
+            bus.emit(
+                "warn",
+                "approval.pending",
+                approval_id=approval_id,
+                cmd=command.cmd,
+                target=target,
+                risk=policy.risk,
+                approvals=len(unique_sources),
+                required=required,
+                sources=sorted(unique_sources),
+                note="duplicate_source",
+            )
+            if command.cmd == "orders.confirm":
+                bus.emit(
+                    "warn",
+                    "orders.confirm.pending",
+                    token=target,
+                    sources=sorted(unique_sources),
+                    note="duplicate_source",
+                )
+            return False, sorted(unique_sources)
+
+        record.setdefault("approvals", []).append(entry)
+        record["last_update"] = now
+        bus.put_approval(record)
+        unique_sources.add(source)
+        sources_list = sorted(unique_sources)
+
+        if len(unique_sources) >= required:
+            bus.delete_approval(approval_id)
+            bus.emit(
+                "ok",
+                "approval.fulfilled",
+                approval_id=approval_id,
+                cmd=command.cmd,
+                target=target,
+                risk=policy.risk,
+                sources=sources_list,
+            )
+            return True, sources_list
+
+        bus.emit(
+            "warn",
+            "approval.pending",
+            approval_id=approval_id,
+            cmd=command.cmd,
+            target=target,
+            risk=policy.risk,
+            approvals=len(unique_sources),
+            required=required,
+            sources=sources_list,
+        )
+        if command.cmd == "orders.confirm":
+            bus.emit("warn", "orders.confirm.pending", token=target, sources=sources_list)
+        return False, sources_list
+
+    def _expire_approvals(self) -> None:
+        now = time.time()
+        if now - self._last_prune < 5:
+            return
+        expired = bus.prune_expired_approvals(int(now))
+        for rec in expired:
+            bus.emit(
+                "warn",
+                "approval.expired",
+                approval_id=rec["approval_id"],
+                cmd=rec["cmd"],
+                target=rec["target"],
+                risk=rec["risk_level"],
+            )
+            if rec["cmd"] == "orders.confirm":
+                bus.emit("warn", "orders.confirm.expired", token=rec["target"])
+        self._last_prune = now
 
     def _token_of(self, oid: str) -> str | None:
         try:

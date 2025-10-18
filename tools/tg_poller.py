@@ -7,7 +7,8 @@ from typing import Any, Optional
 
 from marketlab.net.http import SafeHttpClient
 
-from marketlab.services.telegram_usecases import build_main_menu, handle_callback
+from marketlab.core.control_policy import risk_of_command
+from marketlab.services.telegram_usecases import build_main_menu, enqueue_control, handle_callback
 from marketlab.ipc import bus
 from marketlab.core.timefmt import iso_utc
 from marketlab.bootstrap.env import load_env
@@ -54,6 +55,59 @@ def _short(obj: Any, limit: int = 600) -> str:
 
 requests = _HTTP()  # exposed for tests to monkeypatch
 
+PIN_SESSION_TTL = 60
+
+
+def _action_to_cmd(action: str) -> str:
+    mapping = {
+        "pause": "state.pause",
+        "resume": "state.resume",
+        "stop": "stop.now",
+        "confirm": "orders.confirm",
+        "confirm_token": "orders.confirm",
+        "reject": "orders.reject",
+        "reject_token": "orders.reject",
+        "mode_paper": "mode.switch",
+        "mode_live": "mode.switch",
+    }
+    return mapping.get(action, "")
+
+
+def _requires_pin(cmd: str, pin: str) -> bool:
+    if not pin or not cmd:
+        return False
+    return risk_of_command(cmd) in ("HIGH", "CRITICAL")
+
+
+def _pin_session_ok(pin_cache: dict[int, float], actor_id: int | None) -> bool:
+    if actor_id is None:
+        return False
+    expiry = pin_cache.get(int(actor_id))
+    if not expiry:
+        return False
+    if time.time() > expiry:
+        pin_cache.pop(int(actor_id), None)
+        return False
+    return True
+
+
+def _set_pin_session(pin_cache: dict[int, float], actor_id: int | None) -> None:
+    if actor_id is None:
+        return
+    pin_cache[int(actor_id)] = time.time() + PIN_SESSION_TTL
+
+
+def _allow_rate(rate_tracker: dict[int, list[float]], actor_id: int | None, limit: int) -> bool:
+    if not limit or actor_id is None:
+        return True
+    now = time.time()
+    bucket = rate_tracker.setdefault(int(actor_id), [])
+    bucket[:] = [ts for ts in bucket if now - ts < 60]
+    if len(bucket) >= limit:
+        return False
+    bucket.append(now)
+    return True
+
 
 def _validate_env_from_settings() -> tuple[dict, list[str]]:
     """Build and validate Telegram config from Settings()."""
@@ -89,6 +143,12 @@ def _validate_env_from_settings() -> tuple[dict, list[str]]:
     cfg["debug"] = bool(t.debug)
     cfg["enabled"] = bool(t.enabled)
     cfg["mock"] = bool(t.mock)
+    pin = getattr(t, "command_pin", None)
+    cfg["pin"] = str(pin).strip() if pin else ""
+    try:
+        cfg["rate_limit"] = int(getattr(t, "rate_limit_per_min", 10))
+    except Exception:
+        cfg["rate_limit"] = 10
     # Publish state for dashboard panels
     try:
         bus.set_state("tg.enabled", "1" if t.enabled else "0")
@@ -139,6 +199,10 @@ def main(once: bool = False) -> int:
     debug: bool = bool(cfg["debug"])  # type: ignore[arg-type]
     allow: set[int] = cfg["allow"]  # type: ignore[assignment]
     mock: bool = bool(cfg.get("mock", False))
+    rate_limit: int = int(cfg.get("rate_limit", 10))
+    pin_code: str = str(cfg.get("pin") or "")
+    pin_cache: dict[int, float] = {}
+    rate_tracker: dict[int, list[float]] = {}
     base = _base_url(token)
 
     if mock:
@@ -160,6 +224,42 @@ def main(once: bool = False) -> int:
 
     # Startup checks and banner (mock writes files instead)
     msg_url = f"{base}sendMessage"
+
+    def rate_allowed(sender: int | None, chat_id: int, cb_id: str | None = None) -> bool:
+        if _allow_rate(rate_tracker, sender, rate_limit):
+            return True
+        text = "Rate limit erreicht. Bitte kurz warten."
+        if cb_id:
+            requests.post(
+                f"{base}answerCallbackQuery",
+                json={"callback_query_id": cb_id, "text": text},
+                timeout=timeout,
+            )
+        requests.post(
+            msg_url,
+            json={"chat_id": chat_id, "text": text},
+            timeout=timeout,
+        )
+        return False
+
+    def pin_allowed(cmd: str, sender: int | None, chat_id: int, cb_id: str | None = None) -> bool:
+        if not _requires_pin(cmd, pin_code):
+            return True
+        if _pin_session_ok(pin_cache, sender):
+            return True
+        hint = "PIN erforderlich. Sende /pin <PIN>"
+        if cb_id:
+            requests.post(
+                f"{base}answerCallbackQuery",
+                json={"callback_query_id": cb_id, "text": hint},
+                timeout=timeout,
+            )
+        requests.post(
+            msg_url,
+            json={"chat_id": chat_id, "text": hint},
+            timeout=timeout,
+        )
+        return False
     if not mock:
         url = f"{base}getMe"
         _log_http(debug, "-> GET", url, None, None)
@@ -279,8 +379,13 @@ def main(once: bool = False) -> int:
                             timeout=timeout,
                         )
                         continue
+                    if not rate_allowed(sender_id, chat, cb_id):
+                        continue
+                    cmd_name = _action_to_cmd(str(parsed.get("action", "")))
+                    if not pin_allowed(cmd_name, sender_id, chat, cb_id):
+                        continue
                     try:
-                        handle_callback(parsed)
+                        handle_callback(parsed, actor_id=sender_id)
                         requests.post(
                             f"{base}answerCallbackQuery",
                             json={
@@ -333,29 +438,64 @@ def main(once: bool = False) -> int:
                         )
                         continue
                     txt = msg["text"].strip()
+                    if txt.startswith("/pin"):
+                        if not pin_code:
+                            requests.post(
+                                msg_url,
+                                json={"chat_id": chat_id, "text": "PIN nicht aktiviert"},
+                                timeout=timeout,
+                            )
+                        else:
+                            parts = txt.split(maxsplit=1)
+                            provided = parts[1].strip() if len(parts) > 1 else ""
+                            if provided == pin_code:
+                                _set_pin_session(pin_cache, sender_id)
+                                requests.post(
+                                    msg_url,
+                                    json={
+                                        "chat_id": chat_id,
+                                        "text": f"PIN ok ({PIN_SESSION_TTL}s)",
+                                    },
+                                    timeout=timeout,
+                                )
+                            else:
+                                requests.post(
+                                    msg_url,
+                                    json={"chat_id": chat_id, "text": "PIN falsch"},
+                                    timeout=timeout,
+                                )
+                        continue
+                    if not rate_allowed(sender_id, chat_id):
+                        continue
                     try:
                         if txt == "/pause":
-                            bus.enqueue("state.pause", {}, source="telegram")
+                            if not pin_allowed("state.pause", sender_id, chat_id):
+                                continue
+                            enqueue_control("state.pause", {}, sender_id)
                             requests.post(
                                 msg_url,
                                 json={"chat_id": chat_id, "text": "OK: pause"},
                                 timeout=timeout,
                             )
                         elif txt == "/resume":
-                            bus.enqueue("state.resume", {}, source="telegram")
+                            if not pin_allowed("state.resume", sender_id, chat_id):
+                                continue
+                            enqueue_control("state.resume", {}, sender_id)
                             requests.post(
                                 msg_url,
                                 json={"chat_id": chat_id, "text": "OK: resume"},
                                 timeout=timeout,
                             )
                         elif txt == "/paper":
-                            bus.enqueue(
+                            if not pin_allowed("mode.switch", sender_id, chat_id):
+                                continue
+                            enqueue_control(
                                 "mode.switch",
                                 {
                                     "target": "paper",
                                     "args": {"symbols": ["AAPL"], "timeframe": "1m"},
                                 },
-                                source="telegram",
+                                sender_id,
                             )
                             requests.post(
                                 msg_url,
@@ -363,13 +503,15 @@ def main(once: bool = False) -> int:
                                 timeout=timeout,
                             )
                         elif txt == "/live":
-                            bus.enqueue(
+                            if not pin_allowed("mode.switch", sender_id, chat_id):
+                                continue
+                            enqueue_control(
                                 "mode.switch",
                                 {
                                     "target": "live",
                                     "args": {"symbols": ["AAPL"], "timeframe": "1m"},
                                 },
-                                source="telegram",
+                                sender_id,
                             )
                             requests.post(
                                 msg_url,
@@ -379,7 +521,9 @@ def main(once: bool = False) -> int:
                         elif txt.startswith("/confirm "):
                             tok = txt.split(maxsplit=1)[1].strip()
                             if tok:
-                                bus.enqueue("orders.confirm", {"token": tok}, source="telegram")
+                                if not pin_allowed("orders.confirm", sender_id, chat_id):
+                                    continue
+                                enqueue_control("orders.confirm", {"token": tok}, sender_id)
                                 requests.post(
                                     msg_url,
                                     json={"chat_id": chat_id, "text": f"OK: confirm {tok}"},
@@ -397,7 +541,9 @@ def main(once: bool = False) -> int:
                         elif txt.startswith("/reject "):
                             tok = txt.split(maxsplit=1)[1].strip()
                             if tok:
-                                bus.enqueue("orders.reject", {"token": tok}, source="telegram")
+                                if not pin_allowed("orders.reject", sender_id, chat_id):
+                                    continue
+                                enqueue_control("orders.reject", {"token": tok}, sender_id)
                                 requests.post(
                                     msg_url,
                                     json={"chat_id": chat_id, "text": f"OK: reject {tok}"},
@@ -412,6 +558,22 @@ def main(once: bool = False) -> int:
                                     },
                                     timeout=timeout,
                                 )
+                        elif txt in ("/stop", "/stopnow"):
+                            enqueue_control("stop.now", {}, sender_id)
+                            requests.post(
+                                msg_url,
+                                json={"chat_id": chat_id, "text": "OK: stop.now"},
+                                timeout=timeout,
+                            )
+                        elif txt in ("/stop", "/stopnow"):
+                            if not pin_allowed("stop.now", sender_id, chat_id):
+                                continue
+                            enqueue_control("stop.now", {}, sender_id)
+                            requests.post(
+                                msg_url,
+                                json={"chat_id": chat_id, "text": "OK: stop.now"},
+                                timeout=timeout,
+                            )
                     except Exception as e:
                         requests.post(
                             msg_url,

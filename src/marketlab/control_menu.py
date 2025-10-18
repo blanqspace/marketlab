@@ -6,11 +6,13 @@ from __future__ import annotations
 - Slim main menu; pending orders are listed lazily for actions 4/5.
 """
 
+import os
 import sys
 import warnings
 from typing import Optional
 
 from .ipc import bus
+from .core.control_policy import approval_window, approvals_required, command_target, risk_of_command
 from .orders import store as orders
 from .settings import get_settings
 from .bootstrap.env import load_env
@@ -79,8 +81,34 @@ def _parse_selector(token_or_n: str) -> str | int:
     return token_or_n
 
 
+def _actor_id() -> str:
+    return os.getenv("MARKETLAB_ACTOR") or os.getenv("USER") or "cli-menu"
+
+
+def _queue_control(cmd: str, args: dict) -> str:
+    target = command_target(cmd, args)
+    if target == cmd:
+        base = bus.stable_request_id(cmd, args)
+    else:
+        base = f"{cmd}:{target}"
+    ttl = max(bus.DEFAULT_TTL, approval_window(cmd) + 30)
+    actor = _actor_id()
+    if approvals_required(cmd) > 1 and actor:
+        base = f"{base}:{actor}"
+    req_id = base
+    return bus.enqueue(
+        cmd,
+        args,
+        source="cli",
+        ttl_sec=ttl,
+        actor_id=actor,
+        request_id=req_id,
+        risk_level=risk_of_command(cmd),
+    )
+
+
 def _enqueue_and_print(cmd: str, args: dict) -> None:
-    bus.enqueue(cmd, args, source="cli")
+    _queue_control(cmd, args)
     token_out = args.get("token") or "?"
     sys.stdout.write(f"OK: {cmd} -> {token_out}\n")
     sys.stdout.flush()
@@ -182,8 +210,8 @@ def run_menu() -> None:
         elif choice == "2":
             _enqueue_and_print("state.resume", {})
         elif choice == "3":
-            if _ask_yes_no("Stop ausf hren?"):
-                _enqueue_and_print("state.stop", {})
+            if _ask_yes_no("Stop jetzt ausf hren?"):
+                _enqueue_and_print("stop.now", {})
         elif choice == "4":
             if arg:
                 try:

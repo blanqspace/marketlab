@@ -32,6 +32,8 @@ def main() -> None:
                     telegram.bot_token.get_secret_value() if telegram.bot_token else None
                 ),
                 "allowlist_count": len(telegram.allowlist or []),
+                "pin_set": bool(getattr(telegram, "command_pin", None)),
+                "rate_limit_per_min": getattr(telegram, "rate_limit_per_min", None),
             },
         }
     )

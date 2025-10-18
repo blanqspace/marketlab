@@ -1,9 +1,11 @@
 import json
+import os
 from pathlib import Path
 
 import typer
 
 from .core.status import snapshot
+from .core.control_policy import approval_window, approvals_required, command_target, risk_of_command
 from .ipc import bus
 from .modules.scanner_5m import save_signals, scan_symbols
 from .orders.schema import OrderTicket
@@ -20,6 +22,53 @@ from .utils.logging import setup_logging
 from .utils.signal_handlers import register_signal_handlers
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
+
+
+def _cli_actor_id() -> str:
+    return os.getenv("MARKETLAB_ACTOR") or os.getenv("USER") or "cli"
+
+
+def _resolve_ttl(cmd: str, ttl_override: int | None) -> int:
+    if ttl_override is not None:
+        return int(ttl_override)
+    return max(bus.DEFAULT_TTL, approval_window(cmd) + 30)
+
+
+def _queue_command(
+    cmd: str,
+    args: dict,
+    *,
+    source: str = "cli",
+    ttl_sec: int | None = None,
+    dedupe_key: str | None = None,
+    actor_id: str | None = None,
+    request_id: str | None = None,
+    risk_level: str | None = None,
+) -> str:
+    actor = actor_id or _cli_actor_id()
+    target = command_target(cmd, args)
+    if request_id:
+        rid = request_id
+    else:
+        if target == cmd:
+            base = bus.stable_request_id(cmd, args)
+        else:
+            base = f"{cmd}:{target}"
+        if approvals_required(cmd) > 1 and actor:
+            base = f"{base}:{actor}"
+        rid = base
+    ttl_final = _resolve_ttl(cmd, ttl_sec)
+    risk = risk_level or risk_of_command(cmd)
+    return bus.enqueue(
+        cmd,
+        args,
+        source=source,
+        ttl_sec=ttl_final,
+        dedupe_key=dedupe_key,
+        actor_id=actor,
+        request_id=rid,
+        risk_level=risk,
+    )
 
 
 @app.callback()
@@ -109,7 +158,13 @@ def ctl_enqueue(
     except Exception:
         typer.echo({"error": "args must be JSON"})
         raise typer.Exit(code=2)
-    cmd_id = bus.enqueue(cmd, payload, source=source, ttl_sec=ttl_sec, dedupe_key=dedupe_key)
+    cmd_id = _queue_command(
+        cmd,
+        payload,
+        source=source,
+        ttl_sec=ttl_sec,
+        dedupe_key=dedupe_key,
+    )
     typer.echo({"cmd_id": cmd_id})
 
 
@@ -216,6 +271,15 @@ def health(ctx: typer.Context):
         else:
             typer.echo("DEGRADED")
             raise typer.Exit(code=1)
+    finally:
+        _shutdown(ctx)
+
+
+@app.command("stop-now")
+def stop_now(ctx: typer.Context):
+    try:
+        _queue_command("stop.now", {}, source="cli")
+        typer.echo({"stop": "queued"})
     finally:
         _shutdown(ctx)
 
@@ -349,7 +413,10 @@ def orders(
                 raise ValueError("missing selector: --n | --token | --id | --last")
             rec = resolve_order(selector)
             cmd = f"orders.{action}"
-            bus.enqueue(cmd, {"id": rec["id"]}, source="cli")
+            payload = {"id": rec["id"]}
+            if rec.get("token"):
+                payload["token"] = rec["token"]
+            _queue_command(cmd, payload, source="cli")
             # Token-only output
             typer.echo(f"OK: {cmd} -> {rec.get('token')}")
         else:

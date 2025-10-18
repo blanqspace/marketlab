@@ -16,13 +16,13 @@ def test_handle_callback_confirm_reject_n(tmp_path):
     from marketlab.orders import store as _orders
 
     tok = _orders.get_pending(limit=1)[0]["token"]
-    handle_callback({"action": "confirm_token", "token": tok})
+    handle_callback({"action": "confirm_token", "token": tok}, actor_id=99)
     cmd = bus.next_new()
     assert cmd is not None
     assert cmd.cmd == "orders.confirm"
     bus.mark_done(cmd.cmd_id)
 
-    handle_callback({"action": "reject_token", "token": tok})
+    handle_callback({"action": "reject_token", "token": tok}, actor_id=100)
     cmd2 = bus.next_new()
     assert cmd2 is not None
     assert cmd2.cmd == "orders.reject"

@@ -3,7 +3,8 @@ Telegram diagnostics CLI (stdlib only).
 
 Subcommands:
 - getme                 Show bot identity
-- send --chat <ID> --text "..."  Send test message
+- chatinfo --chat <ID>  Show chat metadata
+- sendtest --chat <ID> --text "..." [-v]  Send test message (verbose)
 - updates [--limit N]   Print latest update ids + types
 - ids                   Show env ids and validation
 
@@ -102,7 +103,7 @@ def cmd_getme() -> int:
     return 0 if r.ok else 3
 
 
-def cmd_send(chat: int, text: str) -> int:
+def cmd_sendtest(chat: int, text: str, verbose: bool = False) -> int:
     tok = _token()
     if not tok:
         print("error: missing TELEGRAM_BOT_TOKEN")
@@ -111,6 +112,19 @@ def cmd_send(chat: int, text: str) -> int:
     if _debug():
         print(f"-> sendMessage {_short(payload)}")
     r = requests.post(f"{_base(tok)}sendMessage", json=payload, timeout=_timeout())
+    if verbose:
+        _print_status(r)
+    else:
+        print(f"HTTP {r.status_code}")
+    return 0 if r.ok else r.status_code
+
+
+def cmd_chatinfo(chat: int) -> int:
+    tok = _token()
+    if not tok:
+        print("error: missing TELEGRAM_BOT_TOKEN")
+        return 2
+    r = requests.get(f"{_base(tok)}getChat", params={"chat_id": chat}, timeout=_timeout())
     _print_status(r)
     return 0 if r.ok else r.status_code
 
@@ -157,9 +171,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="tg_diag", add_help=True)
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("getme")
-    psend = sub.add_parser("send")
+    pchat = sub.add_parser("chatinfo")
+    pchat.add_argument("--chat", type=int, required=True)
+    psend = sub.add_parser("sendtest")
     psend.add_argument("--chat", type=int, required=True)
     psend.add_argument("--text", type=str, required=True)
+    psend.add_argument("-v", "--verbose", action="store_true")
     pupd = sub.add_parser("updates")
     pupd.add_argument("--limit", type=int, default=3)
     sub.add_parser("ids")
@@ -170,8 +187,10 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.cmd == "getme":
         return cmd_getme()
-    if args.cmd == "send":
-        return cmd_send(args.chat, args.text)
+    if args.cmd == "chatinfo":
+        return cmd_chatinfo(args.chat)
+    if args.cmd == "sendtest":
+        return cmd_sendtest(args.chat, args.text, args.verbose)
     if args.cmd == "updates":
         return cmd_updates(args.limit)
     if args.cmd == "ids":

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -164,6 +165,32 @@ def orders_summary(db_path: str) -> dict[str, Any]:
     }
 
 
+def _approvals_stats(db_path: str) -> tuple[int, float]:
+    try:
+        with _connect(db_path) as con:
+            row = con.execute("SELECT strftime('%s','now')").fetchone()
+            now = int(row[0]) if row else int(time.time())
+            cur = con.execute("SELECT requested_at FROM approvals")
+            times = [int(r[0]) for r in cur.fetchall() if r and r[0] is not None]
+            if not times:
+                return (0, 0.0)
+            age_max = max(now - t for t in times)
+            return (len(times), float(age_max))
+    except Exception:
+        return (0, 0.0)
+
+
+def _breaker_state(db_path: str) -> str:
+    try:
+        with _connect(db_path) as con:
+            row = con.execute("SELECT value FROM app_state WHERE key='breaker.state'").fetchone()
+            if row and row[0] is not None:
+                return str(row[0])
+    except Exception:
+        pass
+    return "unknown"
+
+
 def events_tail_agg(db_path: str, n: int = 100) -> list[dict[str, Any]]:
     """Aggregate last N events by (level, message, fields-signature).
 
@@ -216,6 +243,8 @@ def snapshot_kpis(db_path: str) -> dict[str, Any]:
     cmd_counts = recent_cmd_counts(db_path, window_sec=300)
     # orders summary
     ords = orders_summary(db_path)
+    approvals_pending, approvals_age_max = _approvals_stats(db_path)
+    breaker = _breaker_state(db_path)
     # worker meta from last worker.start
     worker_pid = None
     uptime_s = None
@@ -243,5 +272,7 @@ def snapshot_kpis(db_path: str) -> dict[str, Any]:
         "db_basename": db_base,
         "worker_pid": worker_pid,
         "uptime_s": uptime_s,
+        "approvals_pending": approvals_pending,
+        "approvals_age_max": approvals_age_max,
+        "breaker_state": breaker,
     }
-

@@ -16,6 +16,10 @@ class _JsonFormatter(logging.Formatter):
         tok = extras.get("token")
         if tok:
             payload["token"] = tok
+        for field in ("src", "actor_id", "cmd_id"):
+            val = extras.get(field)
+            if val:
+                payload[field] = val
         if record.exc_info:
             payload["exc"] = self.formatException(record.exc_info)
         return json.dumps(payload, ensure_ascii=False)

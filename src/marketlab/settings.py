@@ -30,6 +30,8 @@ class TelegramSettings(BaseSettings):
     long_poll_sec: int = Field(20, alias="TELEGRAM_LONG_POLL_SEC")
     debug: bool = Field(True, alias="TELEGRAM_DEBUG")
     allowlist: list[int] | str = Field(default_factory=list, alias="TG_ALLOWLIST")
+    command_pin: str | None = Field(None, alias="TG_CMD_PIN")
+    rate_limit_per_min: int = Field(10, alias="TG_RATE_LIMIT_PER_MIN")
 
     @field_validator("allowlist", mode="before")
     @classmethod

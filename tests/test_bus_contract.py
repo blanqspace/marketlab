@@ -36,7 +36,7 @@ def test_dedupe_returns_same_cmd_id(tmp_path):
 def test_ttl_and_available_at(tmp_path):
     with_tmp_db(tmp_path)
     # enqueue with available_at in the future by using backoff
-    cid = bus.enqueue("noop", {}, source="cli", ttl_sec=1)
+    cid = bus.enqueue("noop", {}, source="cli", ttl_sec=30)
     # Move command into the future artificially
     bus.mark_error(cid, "backoff", retry_backoff_sec=2)
     assert bus.next_new(now=int(time.time())) is None

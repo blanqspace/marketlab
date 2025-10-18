@@ -3,6 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 from marketlab.ipc import bus
+from marketlab.core.control_policy import (
+    approval_window,
+    approvals_required,
+    command_target,
+    risk_of_command,
+)
 from marketlab.orders import store as orders
 from marketlab.settings import get_settings
 
@@ -37,7 +43,33 @@ def build_main_menu() -> dict:
     return {"inline_keyboard": rows}
 
 
-def handle_callback(data: dict) -> None:
+def _actor_label(actor_id: int | None) -> str:
+    return f"tg:{actor_id}" if actor_id is not None else "tg:unknown"
+
+
+def enqueue_control(cmd: str, args: dict[str, Any], actor_id: int | None) -> str:
+    target = command_target(cmd, args)
+    if target == cmd:
+        base = bus.stable_request_id(cmd, args)
+    else:
+        base = f"{cmd}:{target}"
+    actor = _actor_label(actor_id)
+    if approvals_required(cmd) > 1 and actor:
+        base = f"{base}:{actor}"
+    rid = base
+    ttl = max(bus.DEFAULT_TTL, approval_window(cmd) + 30)
+    return bus.enqueue(
+        cmd,
+        args,
+        source="telegram",
+        ttl_sec=ttl,
+        actor_id=actor,
+        request_id=rid,
+        risk_level=risk_of_command(cmd),
+    )
+
+
+def handle_callback(data: dict, actor_id: int | None = None) -> None:
     """Map callback data dict to bus commands.
 
     Expected format: {"action": ..., ...}
@@ -48,50 +80,50 @@ def handle_callback(data: dict) -> None:
         raise ValueError("missing action")
 
     if action == "pause":
-        bus.enqueue("state.pause", {}, source="telegram")
+        enqueue_control("state.pause", {}, actor_id)
         return
     if action == "resume":
-        bus.enqueue("state.resume", {}, source="telegram")
+        enqueue_control("state.resume", {}, actor_id)
         return
     if action == "stop":
-        bus.enqueue("state.stop", {}, source="telegram")
+        enqueue_control("stop.now", {}, actor_id)
         return
     if action == "confirm":
         oid = data.get("id")
         if not oid:
             raise ValueError("Bitte ID")
-        bus.enqueue("orders.confirm", {"id": str(oid)}, source="telegram")
+        enqueue_control("orders.confirm", {"id": str(oid)}, actor_id)
         return
     if action == "reject":
         oid = data.get("id")
         if not oid:
             raise ValueError("Bitte ID")
-        bus.enqueue("orders.reject", {"id": str(oid)}, source="telegram")
+        enqueue_control("orders.reject", {"id": str(oid)}, actor_id)
         return
     if action == "confirm_token":
         tok = data.get("token")
         if not tok:
             raise ValueError("ungültiger Selector")
-        bus.enqueue("orders.confirm", {"token": str(tok)}, source="telegram")
+        enqueue_control("orders.confirm", {"token": str(tok)}, actor_id)
         return
     if action == "reject_token":
         tok = data.get("token")
         if not tok:
             raise ValueError("ungültiger Selector")
-        bus.enqueue("orders.reject", {"token": str(tok)}, source="telegram")
+        enqueue_control("orders.reject", {"token": str(tok)}, actor_id)
         return
     if action == "mode_paper":
-        bus.enqueue(
+        enqueue_control(
             "mode.switch",
             {"target": "paper", "args": {"symbols": ["AAPL"], "timeframe": "1m"}},
-            source="telegram",
+            actor_id,
         )
         return
     if action == "mode_live":
-        bus.enqueue(
+        enqueue_control(
             "mode.switch",
             {"target": "live", "args": {"symbols": ["AAPL"], "timeframe": "1m"}},
-            source="telegram",
+            actor_id,
         )
         return
 

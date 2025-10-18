@@ -15,6 +15,7 @@ from collections.abc import Sequence
 from rich.console import Console
 
 from marketlab.bootstrap.env import load_env
+from marketlab.core.control_policy import approval_window, approvals_required, command_target, risk_of_command
 from marketlab.core.status import events_tail_agg
 from marketlab.core.status import queue_depth as _queue_depth
 from marketlab.ipc import bus
@@ -116,7 +117,7 @@ def health_ping(db_path: str, timeout_s: float = 3.0) -> dict[str, Any]:
     """
     os.environ[bus.DB_ENV] = db_path
     bus.bus_init()
-    cmd_id = bus.enqueue("state.pause", {}, source="supervisor", ttl_sec=30)
+    cmd_id = enqueue("state.pause", {})
 
     status = "NEW"
     deadline = time.time() + float(timeout_s)
@@ -177,7 +178,11 @@ def _statusline(db_path: str, worker: Proc | None, dash: Proc | None, poller: Pr
         qd = _queue_depth(db_path)
     except Exception:
         qd = 0
-    return f"DB={db_name}  worker={w_pid}  dashboard={d_pid}  poller={p_pid}  Health={health_txt}  QueueDepth={qd}"
+    breaker = bus.get_state("breaker.state", "unknown")
+    return (
+        f"DB={db_name}  worker={w_pid}  dashboard={d_pid}  poller={p_pid}  "
+        f"Health={health_txt}  QueueDepth={qd}  Breaker={breaker}"
+    )
 
 
 def _print_header(db_path: str, worker: Proc | None, dash: Proc | None, poller: Proc | None) -> None:
@@ -218,7 +223,25 @@ def build_menu_panel(db_path: str, worker: Proc | None, dash: Proc | None, messa
 
 def enqueue(cmd: str, args: dict[str, Any]) -> str:
     """Enqueue without printing; used by supervisor dispatch."""
-    return bus.enqueue(cmd, args, source="supervisor", ttl_sec=300)
+    actor = os.getenv("MARKETLAB_SUPERVISOR_ACTOR") or "supervisor"
+    ttl = max(bus.DEFAULT_TTL, approval_window(cmd) + 30)
+    target = command_target(cmd, args)
+    if target == cmd:
+        base = bus.stable_request_id(cmd, args)
+    else:
+        base = f"{cmd}:{target}"
+    if approvals_required(cmd) > 1:
+        base = f"{base}:{actor}"
+    req_id = base
+    return bus.enqueue(
+        cmd,
+        args,
+        source="supervisor",
+        ttl_sec=ttl,
+        actor_id=actor,
+        request_id=req_id,
+        risk_level=risk_of_command(cmd),
+    )
 
 
 def _resolve_token_or_index(arg: str) -> tuple[str, str | None]:

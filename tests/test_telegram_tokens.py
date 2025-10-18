@@ -25,15 +25,17 @@ def test_telegram_buttons_and_callbacks(tmp_path):
     assert any(tok in text for text in texts)
 
     # Callback confirm_token enqueues orders.confirm
-    handle_callback({"action": "confirm_token", "token": tok})
+    handle_callback({"action": "confirm_token", "token": tok}, actor_id=123)
     cmd = bus.next_new()
     assert cmd is not None
     assert cmd.cmd == "orders.confirm"
+    assert cmd.actor_id == "tg:123"
     bus.mark_done(cmd.cmd_id)
 
     # Callback reject_token enqueues orders.reject
-    handle_callback({"action": "reject_token", "token": tok})
+    handle_callback({"action": "reject_token", "token": tok}, actor_id=456)
     cmd2 = bus.next_new()
     assert cmd2 is not None
     assert cmd2.cmd == "orders.reject"
+    assert cmd2.actor_id == "tg:456"
     bus.mark_done(cmd2.cmd_id)
