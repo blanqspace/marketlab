@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from typing import Literal
 
 import typer
 
@@ -77,7 +78,7 @@ def _init(ctx: typer.Context):
     settings = get_settings()
     ctx.obj = {"settings": settings}
     register_signal_handlers()
-    if settings.telegram.enabled:
+    if settings.TELEGRAM_ENABLED and settings.telegram.enabled:
         telegram_service.start_poller(settings)
 
 
@@ -148,11 +149,13 @@ def slack(ctx: typer.Context):
         typer.echo("Slack ist nicht aktiviert (SLACK_ENABLED=0).")
         _shutdown(ctx)
         raise typer.Exit(code=2)
+    simulation = bool(settings.SLACK_SIMULATION)
     missing: list[str] = []
-    if not settings.SLACK_BOT_TOKEN:
-        missing.append("SLACK_BOT_TOKEN")
-    if not settings.SLACK_APP_TOKEN:
-        missing.append("SLACK_APP_TOKEN")
+    if not simulation:
+        if not settings.SLACK_BOT_TOKEN:
+            missing.append("SLACK_BOT_TOKEN")
+        if not settings.SLACK_APP_TOKEN:
+            missing.append("SLACK_APP_TOKEN")
     if missing:
         typer.echo(f"Fehlende Slack-Konfiguration: {', '.join(missing)}")
         _shutdown(ctx)
@@ -183,6 +186,72 @@ def slack_selftest(
     order = {"token": token, "symbol": symbol, "qty": qty, "px": px, "side": "BUY"}
     ref = bot.post_order_pending(order)
     typer.echo({"posted": {"channel": ref.channel, "ts": ref.ts, "thread_ts": ref.thread_ts}})
+
+
+@app.command("mode:set")
+def mode_set(mode: Literal["mock", "real"]):
+    """Setzt SLACK_SIMULATION in .env (mock=1, real=0) und zeigt Status."""
+    from tools.env_edit import ENV_PATH, set_key
+
+    value = "1" if mode == "mock" else "0"
+    set_key("SLACK_SIMULATION", value)
+    typer.echo({"ok": True, "SLACK_SIMULATION": value, "env": str(ENV_PATH.resolve())})
+    typer.echo("Restart services: pkill -f 'marketlab slack|worker:confirm' ; python -m marketlab slack & ; python -m marketlab worker:confirm &")
+
+
+@app.command("mode:status")
+def mode_status():
+    """Zeigt den aktuellen Slack-Simulationsmodus gemäß .env."""
+    from tools.env_edit import get_key
+
+    value = get_key("SLACK_SIMULATION", "0")
+    current_mode = "mock" if value.lower() in {"1", "true", "yes"} else "real"
+    typer.echo({"SLACK_SIMULATION": value, "mode": current_mode})
+
+
+@app.command("telegram:set")
+def telegram_set(state: Literal["on", "off"]):
+    """Archiviert oder reaktiviert Telegram via TELEGRAM_ENABLED in .env."""
+    from tools.env_edit import set_key
+
+    value = "1" if state == "on" else "0"
+    set_key("TELEGRAM_ENABLED", value)
+    typer.echo({"ok": True, "TELEGRAM_ENABLED": value})
+
+
+@app.command("telegram:disable")
+def telegram_disable(ctx: typer.Context):
+    """Deaktiviert Telegram zur Laufzeit und weist auf Archivierungsschritte hin."""
+    from tools.env_edit import set_key
+
+    os.environ["TELEGRAM_ENABLED"] = "0"
+    set_key("TELEGRAM_ENABLED", "0")
+    typer.echo("Telegram zur Laufzeit deaktiviert (TELEGRAM_ENABLED=0).")
+    typer.echo("Nächste Schritte:")
+    typer.echo("- `make tg-clean-env` ausführen, um TELEGRAM_* Werte nach .env.archive zu verschieben.")
+    typer.echo("- Services neu starten (Slack/Worker bleiben aktiv).")
+    _shutdown(ctx)
+
+
+@app.command("telegram:status")
+def telegram_status(ctx: typer.Context):
+    """Zeigt den aktuellen Telegram-Toggle gemäß .env."""
+    from tools.env_edit import get_key
+
+    value = get_key("TELEGRAM_ENABLED", "0")
+    is_active = value.lower() in {"1", "true", "yes"}
+    typer.echo({"TELEGRAM_ENABLED": value, "active": is_active})
+
+
+@app.command("worker:confirm")
+def worker_confirm(ctx: typer.Context):
+    """Startet den minimalen Confirm-Worker (Two-Man-Rule)."""
+    from .workers.confirm_worker import run_forever
+
+    try:
+        run_forever()
+    finally:
+        _shutdown(ctx)
 
 
 ctl = typer.Typer(help="Command bus operations")

@@ -140,8 +140,9 @@ def _validate_env_from_settings() -> tuple[dict, list[str]]:
         cfg["long_poll"] = int(getattr(t, "long_poll_sec", t.timeout_sec))
     except Exception:
         cfg["long_poll"] = int(t.timeout_sec)
+    toggle_enabled = bool(getattr(s, "TELEGRAM_ENABLED", False))
     cfg["debug"] = bool(t.debug)
-    cfg["enabled"] = bool(t.enabled)
+    cfg["enabled"] = bool(t.enabled) and toggle_enabled
     cfg["mock"] = bool(t.mock)
     pin = getattr(t, "command_pin", None)
     cfg["pin"] = str(pin).strip() if pin else ""
@@ -151,7 +152,7 @@ def _validate_env_from_settings() -> tuple[dict, list[str]]:
         cfg["rate_limit"] = 10
     # Publish state for dashboard panels
     try:
-        bus.set_state("tg.enabled", "1" if t.enabled else "0")
+        bus.set_state("tg.enabled", "1" if cfg["enabled"] else "0")
         bus.set_state("tg.mock", "1" if t.mock else "0")
         if chat is not None:
             bus.set_state("tg.chat_control", str(int(chat)))

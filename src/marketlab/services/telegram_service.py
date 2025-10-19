@@ -31,7 +31,9 @@ class TelegramService:
         if self._running:
             return
         tg = getattr(settings, "telegram", None)
-        enabled = bool(getattr(tg, "enabled", False))
+        configured_toggle = bool(getattr(settings, "TELEGRAM_ENABLED", False))
+        env_enabled = bool(getattr(tg, "enabled", False))
+        effective_enabled = configured_toggle and env_enabled
         self._mock = bool(getattr(tg, "mock", False))
         # Token/Chat merken
         tok = getattr(tg, "bot_token", None)
@@ -46,7 +48,7 @@ class TelegramService:
             self._chat_control = None
         # Persist TG state for dashboard
         try:
-            bus.set_state("tg.enabled", "1" if enabled else "0")
+            bus.set_state("tg.enabled", "1" if effective_enabled else "0")
             bus.set_state("tg.mock", "1" if self._mock else "0")
             bus.set_state("tg.bot_username", "")
             bus.set_state("tg.chat_control", str(self._chat_control or ""))
@@ -54,7 +56,8 @@ class TelegramService:
             bus.set_state("tg.allowlist_count", str(len(allow or [])))
         except Exception as exc:
             self._log.warning("Failed to publish telegram state: %s", exc)
-        if not enabled:
+        if not effective_enabled:
+            self._log.info("telegram disabled by config")
             return
         if self._mock:
             self._base.mkdir(parents=True, exist_ok=True)

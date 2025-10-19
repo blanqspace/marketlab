@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import threading
 import time
@@ -17,13 +16,12 @@ from slack_sdk.socket_mode.response import SocketModeResponse
 from src.marketlab.settings import get_settings
 from src.marketlab.ipc import bus
 from src.marketlab.utils.logging import get_logger
-
-
-@dataclass
-class SlackMessageRef:
-    channel: str
-    ts: str
-    thread_ts: Optional[str] = None
+from src.marketlab.services.slack_transport import (
+    ISlackTransport,
+    MockSlackTransport,
+    RealSlackTransport,
+    SlackMessageRef,
+)
 
 
 class SlackBot:
@@ -37,13 +35,19 @@ class SlackBot:
         self.signing_secret = settings.SLACK_SIGNING_SECRET
         self.channel = settings.SLACK_CHANNEL_CONTROL
         self.post_as_thread = bool(settings.SLACK_POST_AS_THREAD)
-        self.web = WebClient(token=self.bot_token) if self.bot_token else None
-        self.sock = (
-            SocketModeClient(app_token=self.app_token, web_client=self.web)
-            if self.app_token and self.web
-            else None
-        )
         self.log = get_logger("slack")
+        self.simulation = bool(settings.SLACK_SIMULATION)
+        self.report_dir = settings.REPORT_DIR
+        if self.simulation:
+            self.web = None
+            self.sock = None
+        else:
+            self.web = WebClient(token=self.bot_token) if self.bot_token else None
+            self.sock = (
+                SocketModeClient(app_token=self.app_token, web_client=self.web)
+                if self.app_token and self.web
+                else None
+            )
         self.index_path = Path("runtime/slack/index.json")
         self.index_path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
@@ -57,6 +61,7 @@ class SlackBot:
         self._poll_interval = 3
         self._channel_id: Optional[str] = None
         self._running = False
+        self.transport: ISlackTransport = self._create_transport()
 
     # --- index helpers ---
     def _load_index(self) -> dict:
@@ -78,8 +83,25 @@ class SlackBot:
             payload = json.dumps(self._index, ensure_ascii=False, indent=2)
             self.index_path.write_text(payload, encoding="utf-8")
 
+    def _create_transport(self) -> ISlackTransport:
+        if self.simulation:
+            return MockSlackTransport(report_dir=self.report_dir, log=self.log)
+        if not self.web:
+            raise RuntimeError("slack web client missing")
+        return RealSlackTransport(
+            web_client=self.web,
+            channel=self.channel,
+            post_as_thread=self.post_as_thread,
+            log=self.log,
+            call_with_retry=self._call_with_retry,
+            channel_resolver=self._resolve_channel_id,
+        )
+
     # --- posting helpers ---
     def _resolve_channel_id(self) -> Optional[str]:
+        if self.simulation:
+            self._channel_id = "SIM"
+            return self._channel_id
         if self._channel_id:
             return self._channel_id
         if not self.web:
@@ -162,6 +184,34 @@ class SlackBot:
             ]
         )
 
+    @staticmethod
+    def _is_order_ok(evt: dict, event: Optional[bus.Event] = None) -> bool:
+        keys = [
+            "orders.confirm.ok",
+            "order.confirm.ok",
+            "orders/confirm/ok",
+            "order/confirm/ok",
+            "confirm_ok",
+        ]
+        n = (evt.get("name") or evt.get("type") or evt.get("message") or "").lower()
+        if any(key in n for key in keys):
+            return True
+        if event and event.message:
+            msg = str(event.message).lower()
+            return any(key in msg for key in keys)
+        return False
+
+    @staticmethod
+    def _is_state_changed(evt: dict, event: Optional[bus.Event] = None) -> bool:
+        keys = ["state.changed"]
+        n = (evt.get("name") or evt.get("type") or evt.get("message") or "").lower()
+        if any(key in n for key in keys):
+            return True
+        if event and event.message:
+            msg = str(event.message).lower()
+            return any(key in msg for key in keys)
+        return False
+
     def _store_order_entry(
         self,
         token: str,
@@ -204,117 +254,14 @@ class SlackBot:
             thread_ts=str(entry.get("thread_ts")) if entry.get("thread_ts") else None,
         )
 
-    def _build_order_blocks(
-        self,
-        token: str,
-        sources: list[str],
-        *,
-        status: str,
-        last_actor: Optional[str] = None,
-        note: Optional[str] = None,
-        confirmed_by: Optional[str] = None,
-    ) -> tuple[str, list[dict[str, Any]]]:
-        safe_sources = ", ".join(sources) if sources else "—"
-        lines = [f"*Order* `{token}`"]
-        if status == "pending":
-            lines.append("⏳ Wartet auf Freigabe")
-        else:
-            lines.append(f"✅ Bestätigt ({confirmed_by or 'unbekannt'})")
-        lines.append(f"Quellen: {safe_sources}")
-        if last_actor:
-            lines.append(f"Letzte Aktion: {last_actor}")
-        if note:
-            lines.append(f"Hinweis: {note}")
-        text = "\n".join(lines)
-        blocks: list[dict[str, Any]] = [
-            {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": text},
-            },
-        ]
-        if status == "pending":
-            value = json.dumps({"token": token})
-            blocks.append(
-                {
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "action_id": "confirm_order",
-                            "text": {"type": "plain_text", "text": "✅ Bestätigen", "emoji": True},
-                            "style": "primary",
-                            "value": value,
-                        },
-                        {
-                            "type": "button",
-                            "action_id": "reject_order",
-                            "text": {"type": "plain_text", "text": "❌ Ablehnen", "emoji": True},
-                            "style": "danger",
-                            "value": value,
-                        },
-                    ],
-                }
-            )
-            blocks.append(
-                {
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "action_id": "pause_state",
-                            "text": {"type": "plain_text", "text": "⏸ Pause", "emoji": True},
-                            "value": "{}",
-                        },
-                        {
-                            "type": "button",
-                            "action_id": "resume_state",
-                            "text": {"type": "plain_text", "text": "▶️ Resume", "emoji": True},
-                            "value": "{}",
-                        },
-                        {
-                            "type": "button",
-                            "action_id": "mode_paper",
-                            "text": {"type": "plain_text", "text": "📄 Paper", "emoji": True},
-                            "value": json.dumps({"mode": "paper"}),
-                        },
-                        {
-                            "type": "button",
-                            "action_id": "mode_live",
-                            "text": {"type": "plain_text", "text": "🟢 Live", "emoji": True},
-                            "value": json.dumps({"mode": "live"}),
-                        },
-                    ],
-                }
-            )
-        return text, blocks
-
     def post_order_pending(self, order: dict) -> SlackMessageRef:
-        if not self.web:
-            raise RuntimeError("slack web client missing")
         token = str(order.get("token") or "")
+        if not token:
+            raise RuntimeError("missing token for slack post")
         sources = list(order.get("sources") or [])
         note = order.get("note")
         last_actor = order.get("last_actor")
-        channel_id = self._resolve_channel_id()
-        if not token or not channel_id:
-            raise RuntimeError("missing token or channel for slack post")
-        text, blocks = self._build_order_blocks(
-            token,
-            sources,
-            status="pending",
-            last_actor=last_actor,
-            note=note,
-        )
-        response = self._call_with_retry(
-            self.web.chat_postMessage,
-            channel=channel_id,
-            text=text,
-            blocks=blocks,
-        )
-        ts = str(response["ts"])
-        ref = SlackMessageRef(channel=str(response["channel"]), ts=ts)
-        if self.post_as_thread:
-            ref.thread_ts = ts
+        ref = self.transport.post_order_pending(order)
         self._store_order_entry(
             token,
             ref,
@@ -323,31 +270,23 @@ class SlackBot:
             last_actor=last_actor,
             note=note,
         )
-        self.log.info("slack order pending posted", extra={"token": token, "channel": ref.channel})
         return ref
 
     def _update_order_pending(self, token: str, entry: dict[str, Any], note: Optional[str]) -> None:
-        if not self.web:
-            return
         ref = self._make_ref_from_entry(entry)
         if not ref:
             return
         sources = entry.get("sources") or []
-        last_actor = entry.get("last_actor")
-        text, blocks = self._build_order_blocks(
-            token,
-            sources,
-            status="pending",
-            last_actor=last_actor,
-            note=note or entry.get("note"),
-        )
-        self._call_with_retry(
-            self.web.chat_update,
-            channel=ref.channel,
-            ts=ref.ts,
-            text=text,
-            blocks=blocks,
-        )
+        order_payload = dict(entry)
+        order_payload.setdefault("token", token)
+        order_payload["sources"] = list(sources)
+        if note is not None:
+            order_payload["note"] = note
+        try:
+            self.transport.update_order_pending(ref, order_payload)
+        except Exception as exc:
+            self.log.error("failed to update pending order", exc_info=exc, extra={"token": token})
+            return
         entry["note"] = note or entry.get("note")
         entry["updated_at"] = int(time.time())
         with self._lock:
@@ -355,61 +294,32 @@ class SlackBot:
         self._save_index()
 
     def update_order_confirmed(self, ref: SlackMessageRef, by_user: str) -> None:
-        if not self.web:
-            return
         token = self._token_by_ts.get(str(ref.ts))
         entry = self._order_entry(token) if token else {}
-        sources = entry.get("sources") or []
-        confirmed_by = by_user or entry.get("confirmed_by") or "n/a"
-        text, blocks = self._build_order_blocks(
-            token or "unbekannt",
-            sources,
-            status="confirmed",
-            confirmed_by=confirmed_by,
-            last_actor=entry.get("last_actor"),
-            note=None,
-        )
-        self._call_with_retry(
-            self.web.chat_update,
-            channel=ref.channel,
-            ts=ref.ts,
-            text=text,
-            blocks=blocks,
-        )
-        thread_ts = ref.thread_ts or ref.ts
+        payload = dict(entry)
+        if token:
+            payload.setdefault("token", token)
         try:
-            self._call_with_retry(
-                self.web.chat_postMessage,
-                channel=ref.channel,
-                thread_ts=thread_ts,
-                text=f"✅ Bestätigt von {confirmed_by}",
-            )
+            self.transport.update_order_confirmed(ref, by_user, payload)
         except Exception as exc:
-            self.log.warning("failed to append confirmation thread", exc_info=exc)
+            self.log.error("failed to update confirmed order", exc_info=exc, extra={"token": token})
+            return
         if token:
             self._store_order_entry(
                 token,
-                SlackMessageRef(channel=ref.channel, ts=ref.ts, thread_ts=thread_ts),
+                SlackMessageRef(channel=ref.channel, ts=ref.ts, thread_ts=ref.thread_ts or ref.ts),
                 status="confirmed",
-                sources=sources,
-                confirmed_by=confirmed_by,
+                sources=list(payload.get("sources") or []),
+                confirmed_by=by_user or payload.get("confirmed_by"),
             )
-        self.log.info("slack order confirmed updated", extra={"token": token, "by": confirmed_by})
+        self.log.info("slack order confirmed stored", extra={"token": token, "by": by_user})
 
     def post_state_change(self, state: str) -> None:
-        if not self.web:
-            return
-        channel_id = self._resolve_channel_id()
-        if not channel_id:
-            return
         self.log.info(f"post state: {state=}")
-        text = f"ℹ️ State geändert → *{state.upper()}*"
-        self._call_with_retry(
-            self.web.chat_postMessage,
-            channel=channel_id,
-            text=text,
-        )
-        self.log.info("slack state message posted", extra={"state": state})
+        try:
+            self.transport.post_state(str(state))
+        except Exception as exc:
+            self.log.error("failed to mirror state change", exc_info=exc, extra={"state": state})
 
     # --- button -> enqueue ---
     def _handle_action(self, action: dict[str, Any], payload: dict[str, Any]) -> None:
@@ -498,13 +408,23 @@ class SlackBot:
         if not self.enabled:
             self.log.warning("Slack disabled via settings")
             return
+        if self._running:
+            return
+        if self.simulation:
+            self._running = True
+            threading.Thread(target=self._tail_events, daemon=True).start()
+            self.log.info("Slack bot started", extra={"channel": "SIM", "mode": "simulation"})
+            try:
+                while True:
+                    time.sleep(60)
+            except KeyboardInterrupt:
+                self.log.info("Slack bot stopped via signal")
+            return
         if not (self.web and self.sock):
             raise RuntimeError("Slack tokens not configured")
         channel_id = self._resolve_channel_id()
         if not channel_id:
             raise RuntimeError("Slack control channel missing")
-        if self._running:
-            return
         self._running = True
         self.sock.socket_mode_request_listeners.append(self._on_socket_event)
         self.sock.connect()
@@ -560,7 +480,6 @@ class SlackBot:
         payload: dict[str, Any] = dict(fields)
         if isinstance(payload_raw, dict):
             payload.update(payload_raw)
-        name = (evt.get("name") or evt.get("type") or evt.get("message") or "").lower()
         if self._is_order_pending(evt):
             order_source = payload_raw if isinstance(payload_raw, dict) else None
             if not order_source and fields:
@@ -575,9 +494,12 @@ class SlackBot:
             if isinstance(sources, str):
                 sources = [sources]
             note = order.get("note") or payload.get("note")
+            last_actor = order.get("last_actor") or payload.get("last_actor")
             entry = self._order_entry(token)
             if entry and entry.get("status") == "pending":
                 entry["sources"] = list(sources or entry.get("sources") or [])
+                if last_actor:
+                    entry["last_actor"] = last_actor
                 self._update_order_pending(token, entry, note)
                 return
             if entry and entry.get("status") == "confirmed":
@@ -587,27 +509,16 @@ class SlackBot:
                 order_out = dict(order) if isinstance(order, dict) else {"token": token}
                 order_out.setdefault("token", token)
                 order_out.setdefault("sources", sources)
-                if note is not None:
-                    order_out.setdefault("note", note)
+                if last_actor and not order_out.get("last_actor"):
+                    order_out["last_actor"] = last_actor
+                if note is not None and order_out.get("note") is None:
+                    order_out["note"] = note
                 ref = self.post_order_pending(order_out)
             except Exception as exc:
                 self.log.error("failed to post pending order", exc_info=exc, extra={"token": token})
                 return
-            with self._lock:
-                by_token = self._index.setdefault("by_token", {})
-                by_token[token] = dict(ref.__dict__)
-            self._save_index()
-        elif any(
-            key in name
-            for key in [
-                "orders.confirm.ok",
-                "order.confirm.ok",
-                "orders/confirm/ok",
-                "order/confirm/ok",
-                "confirm_ok",
-            ]
-        ):
-            token = payload.get("token")
+        elif self._is_order_ok(evt, event):
+            token = payload.get("token") or fields.get("token")
             if not token:
                 return
             entry = self._order_entry(token)
@@ -615,49 +526,18 @@ class SlackBot:
             if not ref:
                 self.log.warning("missing slack ref for confirmed order", extra={"token": token})
                 return
-            sources = payload.get("sources") or []
-            by_user = entry.get("last_actor")
+            by_user = payload.get("by") or entry.get("last_actor")
             if not by_user:
-                # fallback to list of sources
+                sources = payload.get("sources") or entry.get("sources") or []
+                if isinstance(sources, str):
+                    sources = [sources]
                 by_user = ", ".join(sources) if sources else "unbekannt"
-            try:
-                self.update_order_confirmed(ref, by_user)
-            except Exception as exc:
-                self.log.error("failed to update confirmed order", exc_info=exc, extra={"token": token})
-        elif "state.changed" in name or event.message == "state.changed":
-            state = payload.get("state")
+            self.update_order_confirmed(ref, str(by_user))
+        elif self._is_state_changed(evt, event):
+            state = payload.get("state") or fields.get("state")
             if not state:
                 return
-            try:
-                self.post_state_change(str(state))
-            except Exception as exc:
-                self.log.error("failed to mirror state change", exc_info=exc, extra={"state": state})
-        elif event.message == "orders.confirm.ok":
-            token = fields.get("token")
-            if not token:
-                return
-            entry = self._order_entry(token)
-            ref = self._make_ref_from_entry(entry)
-            if not ref:
-                self.log.warning("missing slack ref for confirmed order", extra={"token": token})
-                return
-            sources = fields.get("sources") or []
-            by_user = entry.get("last_actor")
-            if not by_user:
-                # fallback to list of sources
-                by_user = ", ".join(sources) if sources else "unbekannt"
-            try:
-                self.update_order_confirmed(ref, by_user)
-            except Exception as exc:
-                self.log.error("failed to update confirmed order", exc_info=exc, extra={"token": token})
-        elif event.message == "state.changed":
-            state = fields.get("state")
-            if not state:
-                return
-            try:
-                self.post_state_change(str(state))
-            except Exception as exc:
-                self.log.error("failed to mirror state change", exc_info=exc, extra={"state": state})
+            self.post_state_change(str(state))
 
 
 def run_forever():

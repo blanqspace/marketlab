@@ -4,6 +4,8 @@ from functools import lru_cache
 from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+TELEGRAM_ENABLED: bool = False
+
 
 class ClientRole(str, Enum):
     MAIN = "MAIN"
@@ -95,6 +97,8 @@ class AppSettings(BaseSettings):
     kpis_refresh_sec: int = Field(15, alias="KPIS_REFRESH_SEC")
     # Dashboard event filter toggle
     dashboard_warn_only: int = Field(0, alias="DASHBOARD_WARN_ONLY")
+    slack_simulation: bool = Field(False, alias="SLACK_SIMULATION")
+    report_dir: str = Field("runtime/reports", alias="REPORT_DIR")
     ibkr: IBKRSettings = IBKRSettings()
     telegram: TelegramSettings = TelegramSettings()
     slack: SlackSettings = SlackSettings()
@@ -158,6 +162,14 @@ class AppSettings(BaseSettings):
     @property
     def SLACK_POST_AS_THREAD(self) -> bool:  # pragma: no cover
         return bool(self.slack.post_as_thread)
+
+    @property
+    def SLACK_SIMULATION(self) -> bool:  # pragma: no cover
+        return bool(self.slack_simulation)
+
+    @property
+    def REPORT_DIR(self) -> str:  # pragma: no cover
+        return str(self.report_dir)
 
 class RuntimeConfig(BaseModel):
     profile: str

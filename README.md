@@ -18,7 +18,7 @@ marketlab backtest --profile default --symbols AAPL,MSFT --timeframe 15m
 - Stop (sauber, behält Session): `./tools/stop_all.sh`
 - Neu verbinden: `tmux attach -t marketlab`
 - Logs: `logs/*.log` (Rotation durch `tools/proc_guard.py`)
-- Aktionen erfolgen via CLI/Telegram; keine stdin-Menüs.
+- Aktionen erfolgen via CLI oder Slack (Telegram ist archiviert); keine stdin-Menüs.
 
 ## Steuerung und Dashboard
 
@@ -46,7 +46,9 @@ Neue relevante Variablen:
 
 Hinweise:
 - Dashboard ist read-only (keine Eingabe), alle Aktionen via CLI oder Telegram.
-- Telegram und CLI sprechen ausschließlich über den Bus; Two-man-Rule und TTL gelten.
+- Slack (primärer Control-Channel) und CLI sprechen ausschließlich über den Bus; Two-man-Rule und TTL gelten.
+- Simulationsmodus umschalten: `python -m marketlab mode:set mock` (setzt `SLACK_SIMULATION=1`), zurück zu Echtbetrieb: `python -m marketlab mode:set real`.
+- Status prüfen: `python -m marketlab mode:status` (liefert `{"SLACK_SIMULATION": "...", "mode": ...}`).
 
 ### .env laden
 
@@ -120,7 +122,15 @@ KPIS_REFRESH_SEC=15
 DASHBOARD_WARN_ONLY=0
 ```
 
-## Telegram Troubleshooting
+## Telegram (archived)
+
+- Standardmäßig deaktiviert: `TELEGRAM_ENABLED=0`. Slack ist der primäre Control-Channel.
+- Toggle via CLI: `python -m marketlab telegram:set off` (archiviert), `python -m marketlab telegram:set on` (reaktiviert). Status: `python -m marketlab telegram:status`.
+- Bereinigen der `.env`: `make tg-clean-env` → verschiebt `TELEGRAM_*` Schlüssel nach `.env.archive` (mit Zeitstempel) und setzt `TELEGRAM_ENABLED=0`.
+- Services nach der Bereinigung neu starten (Slack/Worker bleiben unverändert aktiv).
+- Wiederherstellung: Schlüssel aus `.env.archive` zurück in `.env` verschieben, `TELEGRAM_ENABLED=1` setzen und Dienste neu starten.
+
+### Troubleshooting (wenn reaktiviert)
 
 - Symptom: HTTP 401 unauthorized
   - Ursache: Falscher Token
@@ -141,7 +151,7 @@ DASHBOARD_WARN_ONLY=0
   - Ursache: Falsches Vorzeichen bei Gruppen-ID, Allowlist falsch
   - Fix: Gruppen verwenden negative IDs; `TG_ALLOWLIST` als CSV von User-IDs pflegen
 
-## Telegram Quickstart
+### Reaktivierung / Quickstart
 
 - Bot anlegen (BotFather) und Token kopieren.
 - Privacy Mode in BotFather für Gruppen ausschalten.

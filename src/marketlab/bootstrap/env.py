@@ -34,17 +34,27 @@ def load_env(mirror: bool = True, settings: AppSettings | None = None) -> AppSet
         os.environ["EVENTS_REFRESH_SEC"] = str(int(s.events_refresh_sec))
         os.environ["KPIS_REFRESH_SEC"] = str(int(s.kpis_refresh_sec))
         os.environ["DASHBOARD_WARN_ONLY"] = str(int(s.dashboard_warn_only))
-        # Telegram
-        os.environ["TELEGRAM_ENABLED"] = "1" if s.telegram.enabled else "0"
-        os.environ["TELEGRAM_MOCK"] = "1" if s.telegram.mock else "0"
-        if s.telegram.bot_token and s.telegram.bot_token.get_secret_value():
-            os.environ["TELEGRAM_BOT_TOKEN"] = s.telegram.bot_token.get_secret_value()
-        if s.telegram.chat_control is not None:
-            os.environ["TG_CHAT_CONTROL"] = str(int(s.telegram.chat_control))
-        if s.telegram.allowlist:
-            os.environ["TG_ALLOWLIST"] = ",".join(str(int(x)) for x in s.telegram.allowlist)
-        os.environ["TELEGRAM_TIMEOUT_SEC"] = str(int(s.telegram.timeout_sec))
-        os.environ["TELEGRAM_DEBUG"] = "1" if s.telegram.debug else "0"
+        # Telegram (archived by default)
+        toggle_enabled = bool(getattr(s, "TELEGRAM_ENABLED", False))
+        effective_enabled = toggle_enabled and bool(s.telegram.enabled)
+        os.environ["TELEGRAM_ENABLED"] = "1" if effective_enabled else "0"
+        if effective_enabled:
+            os.environ["TELEGRAM_MOCK"] = "1" if s.telegram.mock else "0"
+            if s.telegram.bot_token and s.telegram.bot_token.get_secret_value():
+                os.environ["TELEGRAM_BOT_TOKEN"] = s.telegram.bot_token.get_secret_value()
+            if s.telegram.chat_control is not None:
+                os.environ["TG_CHAT_CONTROL"] = str(int(s.telegram.chat_control))
+            if s.telegram.allowlist:
+                os.environ["TG_ALLOWLIST"] = ",".join(str(int(x)) for x in s.telegram.allowlist)
+            os.environ["TELEGRAM_TIMEOUT_SEC"] = str(int(s.telegram.timeout_sec))
+            os.environ["TELEGRAM_DEBUG"] = "1" if s.telegram.debug else "0"
+        else:
+            os.environ.pop("TELEGRAM_MOCK", None)
+            os.environ.pop("TELEGRAM_BOT_TOKEN", None)
+            os.environ.pop("TG_CHAT_CONTROL", None)
+            os.environ.pop("TG_ALLOWLIST", None)
+            os.environ.pop("TELEGRAM_TIMEOUT_SEC", None)
+            os.environ.pop("TELEGRAM_DEBUG", None)
 
     # Startup summary (non-sensitive)
     token_show = _mask_token(s.telegram.bot_token.get_secret_value() if s.telegram.bot_token else None)
@@ -52,9 +62,10 @@ def load_env(mirror: bool = True, settings: AppSettings | None = None) -> AppSet
     brand = s.app_brand if hasattr(s, "app_brand") else "MarketLab"
     mode = s.env_mode if hasattr(s, "env_mode") else "DEV"
     db_name = os.path.basename(s.ipc_db)
+    toggle_enabled = bool(getattr(s, "TELEGRAM_ENABLED", False))
+    effective_enabled = toggle_enabled and bool(s.telegram.enabled)
     print(
-        f"config.summary brand={brand} mode={mode} db={db_name} tg.enabled={'1' if s.telegram.enabled else '0'} tg.mock={'1' if s.telegram.mock else '0'} tg.chat={s.telegram.chat_control or '-'} tg.allow={allow_cnt} tg.token={token_show}"
+        f"config.summary brand={brand} mode={mode} db={db_name} tg.enabled={'1' if effective_enabled else '0'} tg.mock={'1' if s.telegram.mock else '0'} tg.chat={s.telegram.chat_control or '-'} tg.allow={allow_cnt} tg.token={token_show}"
     )
 
     return s
-

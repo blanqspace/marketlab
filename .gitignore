@@ -27,6 +27,7 @@ venv/
 
 # 📝 Projekt-Logs & Laufzeitdateien
 logs/
+runtime/env_backups/
 runtime/locks/
 *.lock
 runtime/
