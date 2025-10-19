@@ -1,7 +1,7 @@
 LINT_TARGETS := scripts/env_check.py tools/verify_telegram_env.py
 FORMAT_TARGETS := scripts/env_check.py tools/tg_poller.py tools/verify_telegram_env.py src/marketlab/tools src/marketlab/ui src/marketlab/daemon/worker.py
 
-.PHONY: venv install env-check lint lint-all lint-report format type test security run-supervisor run-worker run-poller run-dashboard run-all-tmux e2e ci
+.PHONY: venv install env-check lint lint-all lint-report format type test security run-supervisor run-worker run-poller run-dashboard run-all-tmux e2e ci slack tmux-slack svc-install svc-enable svc-start svc-status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -54,6 +54,24 @@ run-dashboard:
 
 run-all-tmux:
 	bash tools/tmux_marketlab.sh
+
+slack:
+	python -m marketlab slack
+
+tmux-slack:
+	bash tools/tmux_marketlab_slack.sh
+
+svc-install:
+	install -D -m 0644 tools/systemd/marketlab-slack.service $(HOME)/.config/systemd/user/marketlab-slack.service
+
+svc-enable:
+	systemctl --user enable marketlab-slack.service
+
+svc-start:
+	systemctl --user start marketlab-slack.service
+
+svc-status:
+	systemctl --user status marketlab-slack.service
 
 e2e:
 	IPC_DB=runtime/e2e.db PYTHONPATH=src $(PY) - <<'PY'

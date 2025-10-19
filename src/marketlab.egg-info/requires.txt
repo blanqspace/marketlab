@@ -4,6 +4,7 @@ ib-insync>=0.9
 pandas>=2.2
 pyarrow>=17.0
 requests>=2.32
+slack_sdk>=3.27.0
 rich>=13.7
 textual>=0.47
 

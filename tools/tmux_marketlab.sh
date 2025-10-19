@@ -131,41 +131,60 @@ session_is_healthy() {
   if ! session_exists; then
     return 1
   fi
-  local expected=(supervisor worker poller dashboard)
   local panes
   mapfile -t panes < <(list_panes)
-  if ((${#panes[@]} != ${#expected[@]})); then
+  if ((${#panes[@]} == 0)); then
     return 1
   fi
-  local seen=0
-  declare -A seen_map=()
-  local pane index title pid
+  declare -A seen=()
+  local pane
   for pane in "${panes[@]}"; do
-    read -r index title pid <<<"$pane"
+    local fields
+    IFS=' ' read -r -a fields <<<"$pane"
+    local title=${fields[1]-}
+    local pid=${fields[2]-}
     if [[ -z "$title" || -z "$pid" ]]; then
+      log "session health empty-field pane=${pane} title='${title:-}' pid='${pid:-}'"
       return 1
     fi
     if ! kill -0 "$pid" 2>/dev/null; then
+      log "session health dead pid title=${title} pid=${pid}"
       return 1
     fi
-    local match=false
-    local t
-    for t in "${expected[@]}"; do
-      if [[ "$title" == "$t" ]]; then
-        match=true
-        if [[ -n ${seen_map[$title]:-} ]]; then
-          return 1
-        fi
-        seen_map[$title]=1
-        ((seen++))
-        break
-      fi
-    done
-    if [[ "$match" == false ]]; then
-      return 1
+    seen["$title"]=1
+  done
+  local required
+  local -a missing=()
+  for required in supervisor worker poller dashboard; do
+    if [[ -z ${seen[$required]:-} ]]; then
+      missing+=("$required")
     fi
   done
-  ((seen == ${#expected[@]}))
+  if ((${#missing[@]} > 0)); then
+    local panes_text
+    panes_text=$(list_panes | tr '\n' ';')
+    log "session health missing=${missing[*]:-} panes=${panes_text}"
+    return 1
+  fi
+  return 0
+}
+
+await_session_healthy() {
+  local attempts=${1:-6}
+  local delay=${2:-0.5}
+  local i
+  for ((i = 0; i < attempts; i++)); do
+    if session_is_healthy; then
+      return 0
+    fi
+    if ((i == attempts - 1)); then
+      local panes_text
+      panes_text=$(list_panes | tr '\n' ';')
+      log "health check pending attempt=$((i + 1))/${attempts} panes=${panes_text}"
+    fi
+    sleep "$delay"
+  done
+  return 1
 }
 
 print_health() {
@@ -267,7 +286,7 @@ fi
 if session_exists; then
   if "$RESET"; then
     kill_session
-  elif session_is_healthy; then
+  elif await_session_healthy 4 0.5; then
     log "reusing healthy session"
     attach_session
     exit 0
@@ -278,7 +297,7 @@ if session_exists; then
 fi
 
 create_session
-if session_is_healthy; then
+if await_session_healthy; then
   attach_session
   exit 0
 fi

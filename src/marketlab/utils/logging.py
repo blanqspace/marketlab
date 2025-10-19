@@ -35,3 +35,8 @@ def setup_logging(verbose: bool = False) -> None:
     root.handlers.clear()
     root.addHandler(handler)
     root.setLevel(level)
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Return a logger configured to emit JSON to stdout."""
+    return logging.getLogger(name)

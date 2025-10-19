@@ -1,0 +1,19 @@
+[Unit]
+Description=MarketLab Slack Bot (Socket Mode)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Pfade anpassen:
+WorkingDirectory=/home/blanqspace/marketlab
+# venv Python:
+ExecStart=/home/blanqspace/marketlab/.venv/bin/python -m marketlab slack
+Restart=always
+RestartSec=5
+User=blanqspace
+# Optional: Limit & Logs
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

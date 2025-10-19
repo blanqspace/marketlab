@@ -59,6 +59,25 @@ class TelegramSettings(BaseSettings):
         except Exception:
             return []
 
+class SlackSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    enabled: bool = Field(False, alias="SLACK_ENABLED")
+    bot_token: str = Field("", alias="SLACK_BOT_TOKEN")
+    app_token: str = Field("", alias="SLACK_APP_TOKEN")
+    signing_secret: str = Field("", alias="SLACK_SIGNING_SECRET")
+    channel_control: str = Field("#marketlab-control", alias="SLACK_CHANNEL_CONTROL")
+    post_as_thread: bool = Field(True, alias="SLACK_POST_AS_THREAD")
+
+    @field_validator("channel_control", mode="before")
+    @classmethod
+    def _normalize_channel(cls, value: str | None):
+        if value is None:
+            return "#marketlab-control"
+        val = str(value).strip()
+        if not val:
+            return "#marketlab-control"
+        return val
+
 class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
     env_mode: str = Field("DEV", alias="ENV_MODE")
@@ -78,6 +97,7 @@ class AppSettings(BaseSettings):
     dashboard_warn_only: int = Field(0, alias="DASHBOARD_WARN_ONLY")
     ibkr: IBKRSettings = IBKRSettings()
     telegram: TelegramSettings = TelegramSettings()
+    slack: SlackSettings = SlackSettings()
 
     # --- Compatibility accessors (flat-style) ---
     @property
@@ -114,6 +134,30 @@ class AppSettings(BaseSettings):
     @property
     def TELEGRAM_DEBUG(self) -> bool:  # pragma: no cover
         return bool(self.telegram.debug)
+
+    @property
+    def SLACK_ENABLED(self) -> bool:  # pragma: no cover
+        return bool(self.slack.enabled)
+
+    @property
+    def SLACK_BOT_TOKEN(self) -> str:  # pragma: no cover
+        return str(self.slack.bot_token or "")
+
+    @property
+    def SLACK_APP_TOKEN(self) -> str:  # pragma: no cover
+        return str(self.slack.app_token or "")
+
+    @property
+    def SLACK_SIGNING_SECRET(self) -> str:  # pragma: no cover
+        return str(self.slack.signing_secret or "")
+
+    @property
+    def SLACK_CHANNEL_CONTROL(self) -> str:  # pragma: no cover
+        return str(self.slack.channel_control or "#marketlab-control")
+
+    @property
+    def SLACK_POST_AS_THREAD(self) -> bool:  # pragma: no cover
+        return bool(self.slack.post_as_thread)
 
 class RuntimeConfig(BaseModel):
     profile: str

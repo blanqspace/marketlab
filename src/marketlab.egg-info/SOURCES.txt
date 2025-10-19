@@ -36,6 +36,7 @@ src/marketlab/net/http.py
 src/marketlab/orders/schema.py
 src/marketlab/orders/store.py
 src/marketlab/services/__init__.py
+src/marketlab/services/slack_bot.py
 src/marketlab/services/telegram_service.py
 src/marketlab/services/telegram_usecases.py
 src/marketlab/tools/__init__.py

@@ -140,6 +140,51 @@ def supervisor():
     run_supervisor()
 
 
+@app.command("slack")
+def slack(ctx: typer.Context):
+    """Startet den Slack-Socket-Mode-Bot als Control-Kanal."""
+    settings = ctx.obj["settings"]
+    if not settings.SLACK_ENABLED:
+        typer.echo("Slack ist nicht aktiviert (SLACK_ENABLED=0).")
+        _shutdown(ctx)
+        raise typer.Exit(code=2)
+    missing: list[str] = []
+    if not settings.SLACK_BOT_TOKEN:
+        missing.append("SLACK_BOT_TOKEN")
+    if not settings.SLACK_APP_TOKEN:
+        missing.append("SLACK_APP_TOKEN")
+    if missing:
+        typer.echo(f"Fehlende Slack-Konfiguration: {', '.join(missing)}")
+        _shutdown(ctx)
+        raise typer.Exit(code=2)
+    from .services.slack_bot import SlackBot
+
+    bot = SlackBot()
+    try:
+        bot.start()
+    except RuntimeError as exc:
+        typer.echo(f"Slack-Bot konnte nicht starten: {exc}")
+        raise typer.Exit(code=2)
+    finally:
+        _shutdown(ctx)
+
+
+@app.command("slack:selftest")
+def slack_selftest(
+    token: str = typer.Option("TEST123", "--token"),
+    symbol: str = typer.Option("AAPL", "--symbol"),
+    qty: int = typer.Option(10, "--qty"),
+    px: float = typer.Option(178.2, "--px"),
+):
+    """Post a fake pending order to Slack to verify blocks/buttons."""
+    from .services.slack_bot import SlackBot
+
+    bot = SlackBot()
+    order = {"token": token, "symbol": symbol, "qty": qty, "px": px, "side": "BUY"}
+    ref = bot.post_order_pending(order)
+    typer.echo({"posted": {"channel": ref.channel, "ts": ref.ts, "thread_ts": ref.thread_ts}})
+
+
 ctl = typer.Typer(help="Command bus operations")
 app.add_typer(ctl, name="ctl")
 
@@ -166,6 +211,38 @@ def ctl_enqueue(
         dedupe_key=dedupe_key,
     )
     typer.echo({"cmd_id": cmd_id})
+
+
+@ctl.command("tail")
+def ctl_tail(limit: int = typer.Option(30, "--limit")):
+    """Dump last N events from bus for debugging."""
+    events = bus.tail_events(limit=limit)
+    import json as _json
+
+    payload = [
+        {"ts": evt.ts, "level": evt.level, "message": evt.message, "fields": evt.fields}
+        for evt in events
+    ]
+    typer.echo(_json.dumps(payload, indent=2, ensure_ascii=False))
+
+
+@ctl.command("emit")
+def ctl_emit(
+    name: str = typer.Option(..., "--name"),
+    payload: str = typer.Option("{}", "--payload"),
+):
+    """Emit a raw event into bus (JSON payload)."""
+    import json as _json
+
+    try:
+        fields = _json.loads(payload or "{}")
+    except Exception as exc:
+        typer.echo({"error": f"payload must be JSON: {exc}"})
+        raise typer.Exit(code=2)
+    if not isinstance(fields, dict):
+        typer.echo({"error": "payload must decode to an object"})
+        raise typer.Exit(code=2)
+    bus.emit("debug", name, **fields)
 
 
 @ctl.command("drain")

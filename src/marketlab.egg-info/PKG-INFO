@@ -11,6 +11,7 @@ Requires-Dist: ib-insync>=0.9
 Requires-Dist: pandas>=2.2
 Requires-Dist: pyarrow>=17.0
 Requires-Dist: requests>=2.32
+Requires-Dist: slack_sdk>=3.27.0
 Requires-Dist: rich>=13.7
 Requires-Dist: textual>=0.47
 Provides-Extra: dev
@@ -65,6 +66,7 @@ Neue relevante Variablen:
 - `IPC_DB=runtime/ctl.db`
 - `ORDERS_TWO_MAN_RULE=1`
 - `CONFIRM_STRICT=1`
+- `SLACK_ENABLED=0` plus `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_CHANNEL_CONTROL`, `SLACK_POST_AS_THREAD`
 
 Hinweise:
 - Dashboard ist read-only (keine Eingabe), alle Aktionen via CLI oder Telegram.
@@ -128,6 +130,12 @@ TWS_HOST=127.0.0.1
 TWS_PORT=7497
 TELEGRAM_ENABLED=false
 TELEGRAM_BOT_TOKEN=ignored
+SLACK_ENABLED=0
+SLACK_BOT_TOKEN=
+SLACK_APP_TOKEN=
+SLACK_SIGNING_SECRET=
+SLACK_CHANNEL_CONTROL=#marketlab-control
+SLACK_POST_AS_THREAD=1
 IPC_DB=runtime/ctl.db
 ORDERS_TWO_MAN_RULE=1
 CONFIRM_STRICT=1
@@ -175,3 +183,13 @@ DASHBOARD_WARN_ONLY=0
 - Poller starten:
   - `python -m tools.tg_poller`
   - Startbanner erscheint im Control-Chat; Kommandos `/pause`, `/resume`, `/paper`, `/live`, `/confirm <TOKEN>`, `/reject <TOKEN>` werden angenommen und als Bus-Events enqueued (source="telegram").
+
+## Slack Control Channel
+
+- Aktivierung über `.env`: `SLACK_ENABLED=1`, Bot-Token (`SLACK_BOT_TOKEN`), App-Level Token für Socket Mode (`SLACK_APP_TOKEN`), Signing Secret (`SLACK_SIGNING_SECRET`), Zielkanal (`SLACK_CHANNEL_CONTROL`, Name oder Channel-ID) und optional `SLACK_POST_AS_THREAD=1` für Thread-Updates.
+- Start: `python -m marketlab slack` (CLI prüft Konfiguration und beendet sich mit Code 2 bei fehlenden Tokens).
+- Events aus dem Command-Bus werden gespiegelt:
+  - `orders.confirm.pending` → Nachricht mit Buttons (Bestätigen/Ablehnen/Pause/Resume/Paper/Live).
+  - `orders.confirm.ok` → ursprüngliche Nachricht wird auf ✅ aktualisiert, zusätzlicher Thread-Eintrag mit Quelle.
+  - `state.changed` → Info-Meldung im Kanal.
+- Button-Aktionen enqueuen direkt auf den SQLite-Bus mit `source="slack"` und markieren den Slack-User (`actor_id=slack:<user>`); Rate-Limits und Netzwerkfehler werden automatisch mit Backoff behandelt.
